@@ -72,6 +72,11 @@ switchesInit (int argc, char **argv)
   switches.maxOfRole = 0;	// no maximum default
   switches.oneRolePerAgent = 0;	// agents can perform multiple roles
 
+  // Prefix filter
+  switches.prefixFilterLength = 0;	// Lenght of prefix filter
+  switches.prefixFilterModulus = 0;	// Modulus applied to path before comparing to filter
+  switches.prefixFilter = NULL;	// prefix filter array
+
   // Arachne
   switches.heuristic = 674;	// default goal selection method (used to be 162)
   switches.maxIntruderActions = INT_MAX;	// max number of encrypt/decrypt events
@@ -147,6 +152,31 @@ switchesDone (void)
 {
   if (lastfoundprefix != NULL)
     free (lastfoundprefix);
+}
+
+//! Count the number of occurrences of a character in a string
+/**
+ * This is probably a standard C function somewhere but I couldn't immediately find it.
+ */
+int
+countOccurs (char *ss, char c)
+{
+  int count;
+
+  count = 0;
+  while (ss != NULL)
+    {
+      if (ss[0] == '\0')
+	{
+	  break;
+	}
+      if (ss[0] == c)
+	{
+	  count++;
+	}
+      ss++;
+    }
+  return count;
 }
 
 //! Open a (protocol) file.
@@ -1472,6 +1502,82 @@ switcher (const int process, int index, int commandline)
 	  switches.oneRolePerAgent = 1;
 	  return index;
 	}
+    }
+
+  /* ==================
+   *  Prefix filter
+   *
+   *  The path prefix filter restricts Scyther's search to subsets of the state space.
+   *
+   *  This is useful for parallellising Scyther's search, essentially splitting
+   *  the search space, such that different processes can explore different
+   *  parts in parallell.
+   *
+   *  Usage:
+   *  --prefix-filter=M:n0,n1,n2,n3,n4
+   *
+   *  where M is the modulus applied to the prefix, and each ni is in 0<=ni<M,
+   *  representing the prefix that will be explored.
+   */
+  if (detect (' ', "prefix-filter", 1))
+    {
+      char *filterarg;
+      char *sequence;
+      int i;
+
+      filterarg = string_argument ();
+
+      // Extract modulus, if it exists
+      sequence = strchr (filterarg, ':');
+      if (sequence == NULL)
+	{
+	  // No modulus given, skip (leave to default 0)
+	  sequence = filterarg;
+	}
+      else
+	{
+	  int result;
+
+	  sequence[0] = '\0';
+	  sequence++;
+	  if (sscanf (filterarg, "%i", &result) != 1)
+	    {
+	      error ("Could not parse modulus argument of prefix filter.");
+	    }
+	  switches.prefixFilterModulus = result;
+	}
+
+      // Determine length of sequence first so we can allocate memory for the filter array
+      switches.prefixFilterLength = countOccurs (sequence, ',') + 1;
+      switches.prefixFilter =
+	(int *) malloc (sizeof (int) * switches.prefixFilterLength);
+
+      // Extract the concrete numbers from sequence
+      for (i = 0; i < switches.prefixFilterLength; i++)
+	{
+	  char *next;
+	  int result;
+
+	  if (sequence == NULL)
+	    {
+	      error ("Ran out of arguments to parse for prefix filter.");
+	    }
+	  next = strchr (sequence, ',');
+	  if (next != NULL)
+	    {
+	      next[0] = '\0';
+	      next++;
+	    }
+	  if (sscanf (sequence, "%i", &result) != 1)
+	    {
+	      error ("Could not parse argument %i of prefix filter.", i);
+	    }
+	  switches.prefixFilter[i] = result;
+	  sequence = next;
+	}
+
+      // Success, return
+      return index;
     }
 
 

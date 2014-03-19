@@ -48,6 +48,11 @@ struct switchdata
   int maxOfRole;		//!< When not 0, maximum number of instances of each unique (non intruder) role
   int oneRolePerAgent;		//!< When 0, agents can perform multiple roles
 
+  // Prefix filter
+  int prefixFilterLength;	//!< When 0, no prefix filter on tree. Otherwise it denotes the length of the path filter.
+  int prefixFilterModulus;	//!< The modulus applied to the choices on the path before comparing to the filter.
+  int *prefixFilter;		//!< Prefix filter array [0..prefixFilterLength]
+
   // Arachne
   int heuristic;		//!< Goal selection method for Arachne engine
   int maxIntruderActions;	//!< Maximum number of intruder actions in the semitrace (encrypt/decrypt)
