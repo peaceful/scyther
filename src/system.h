@@ -27,6 +27,7 @@
 #include "states.h"
 #include "role.h"
 #include "list.h"
+#include "intlist.h"
 
 #define runPointerGet(sys,run)		sys->runs[run].index
 #define runPointerSet(sys,run,newp)	sys->runs[run].index = newp
@@ -129,6 +130,10 @@ struct system
   int num_regular_runs;		//!< Number of regular runs
   int num_helper_runs;		//!< Number of helper runs
   int num_intruder_runs;	//!< Number of intruder runs
+
+  /* prefix path filtering admin */
+  int choicePathLength;		//!< How many choices we have already made
+  IntList choicePath;		//!< The list of choices (integers)
 
   /* protocol definition */
   Protocol protocols;		//!< List of protocols in the system

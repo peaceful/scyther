@@ -66,6 +66,7 @@
 #include "heuristic.h"
 #include "tempfile.h"
 #include "trusted.h"
+#include "intlist.h"
 
 extern int *graph;
 extern int nodes;
@@ -94,6 +95,7 @@ static FILE *attack_stream;
  * Forward declarations
  */
 
+int fork_goal_option ();
 
 /*
  * Program code
@@ -951,7 +953,7 @@ bind_existing_to_goal (const Binding b, const int run, const int index,
 		eprintf ("\n");
 	      }
 	    // new create key goals, bind etc.
-	    createDecryptionChain (b, run, index, keylist, iterate);
+	    createDecryptionChain (b, run, index, keylist, fork_goal_option);
 	  }
 	else
 	  {
@@ -1279,7 +1281,7 @@ bind_goal_new_encrypt (const Binding b)
 		if (goal_bind (b, run, index))
 		  {
 		    proof_suppose_binding (b);
-		    flag = flag && iterate ();
+		    flag = flag && fork_goal_option ();
 		    goal_unbind (b);
 		  }
 		else
@@ -1485,7 +1487,63 @@ bind_goal_old_intruder_run (Binding b)
   return flag;
 }
 
+
+
+
+//! Fork single goal
+/**
+ * Wrapper for iterate() to make sure we update the counter if needed.
+ */
+int
+fork_goal_option ()
+{
+  if (switches.prefixFilterLength > 0)
+    {
+      // If we are filtering on prefix path, we need to do some admin here so 'prune_bounds' has something to check.
+      sys->choicePath->value++;
+    }
+
+  return iterate ();
+}
+
+//! Fork possible goal bindings (typically multiple options)
+/**
+ * This is the core of the case distinction in the search algorithm.
+ */
+int
+fork_goal_options (const Binding b)
+{
+  int flag;
+
+  if (switches.prefixFilterLength > 0)
+    {
+      // If we are filtering on prefix path, we need to do some admin here so 'prune_bounds' has something to check.
+      sys->choicePath = intlist_insert (sys->choicePath, -1);	// head of list is pointer. Initial value is -1 since we increment before iteration, making the effective first value 0.
+      sys->choicePathLength++;	// increment length
+    }
+
+  // The following functions must call 'fork_goal_option' instead of 'iterate' directly.
+  flag = bind_goal_regular_run (b);
+  flag = flag && bind_goal_old_intruder_run (b);
+  flag = flag && bind_goal_new_intruder_run (b);
+
+  if (switches.prefixFilterLength > 0)
+    {
+      // If we are filtering on prefix path, we need to do some admin here so 'prune_bounds' has something to check.
+      sys->choicePath = intlist_delete (sys->choicePath);	// remove head
+      sys->choicePathLength--;	// decrease length
+    }
+  return flag;
+}
+
+
+
+
+
 //! Bind a goal in all possible ways
+/**
+ * This function wraps fork_goal_options and takes care of simple cases as well.
+ */
 int
 bind_goal_all_options (const Binding b)
 {
@@ -1537,9 +1595,7 @@ bind_goal_all_options (const Binding b)
 	  else
 	    {
 	      // Normal case
-	      flag = bind_goal_regular_run (b);
-	      flag = flag && bind_goal_old_intruder_run (b);
-	      flag = flag && bind_goal_new_intruder_run (b);
+	      flag = fork_goal_options (b);
 	    }
 	  proofDepth--;
 

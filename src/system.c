@@ -135,6 +135,9 @@ systemReset (const System sys)
   sys->num_helper_runs = 0;	// number of helper runs
   sys->num_regular_runs = 0;	// number of regular runs
 
+  sys->choicePathLength = 0;	// choice path length
+  sys->choicePath = NULL;	// choice path integer list
+
   /* transfer switches */
   sys->maxtracelength = switches.maxtracelength;
 }
