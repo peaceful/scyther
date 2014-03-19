@@ -55,3 +55,4 @@ if __name__ == '__main__':
         print simpleRun(" ".join(pars))
 
 
+# vim: set ts=4 sw=4 et list lcs=tab\:>-:
