@@ -37,6 +37,30 @@ def stateDescription(okay,n=1,caps=False):
     return s
 
 
+def mergeAttacks(al1,al2):
+    """
+    Merge two attack lists.
+
+    This is not simply a concatenation because the attacks may be decreasing in cost in each list.
+
+    TODO: Attack output in XML from Scyther should include cost and this should be parsed by the XML reader.
+
+    For now, we do a simple hack, which is a zipped merge from the back, working from the decreasing cost assumption.
+    """
+    i1 = len(al1)-1
+    i2 = len(al2)-1
+    res = []    # We're going to build it in reverse, since append is faster
+    while i1 + i2 > 0:
+        if i1 > 0:
+            res.append(al1[i1])
+            i1 = i1 - 1
+        if i2 > 0:
+            res.append(al2[i2])
+            i2 = i2 - 1
+    res.reverse()
+    return res
+    
+
 class Claim(object):
     def __init__(self):
         # Identification
