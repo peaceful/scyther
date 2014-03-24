@@ -39,6 +39,7 @@ def stateDescription(okay,n=1,caps=False):
 
 class Claim(object):
     def __init__(self):
+        # Identification
         self.id = None          # a unique id string, consisting of 'protocol,label'
         self.claimtype = None
         self.label = None
@@ -46,18 +47,37 @@ class Claim(object):
         self.protocol = None
         self.role = None
         self.parameter = None
+
+        # Results
         self.failed = 0
         self.count = 0
         self.states = 0
         self.complete = False
         self.timebound = False
         self.attacks = []
-        self.state = False      # if true, it is a state, not an attack
-        self.okay = None        # true if good, false if bad
 
         # derived info
+        self.state = False      # if true, it is a state, not an attack
+        self.okay = None        # true if good, false if bad
         self.foundstates = False
         self.foundproof = False
+
+    def deriveInfo(self):
+        """
+        Derive information
+        """
+        # some additional properties
+        self.state = (str(self.claimtype) == 'Reachable')
+        self.foundstates = (self.failed > 0)
+        self.foundproof = (self.complete)
+
+        # status
+        # normally, with attacks, okay means none
+        self.okay = (self.failed == 0)
+        if self.state:
+            # but the logic reverses when it is states and not
+            # attacks...
+            self.okay = (not self.okay)
 
     def analyze(self):
 
@@ -71,21 +91,8 @@ class Claim(object):
         # determine id
         self.id = "%s,%s" % (self.protocol,self.shortlabel)
 
-        # some additional properties
-        if str(self.claimtype) == 'Reachable':
-            self.state = True
-        if self.failed > 0:
-            self.foundstates = True
-        if self.complete:
-            self.foundproof = True
+        self.deriveInfo()
 
-        # status
-        # normally, with attacks, okay means none
-        self.okay = (self.failed == 0)
-        if self.state:
-            # but the logic reverses when it is states and not
-            # attacks...
-            self.okay = (not self.okay)
 
     def stateName(self,count=1,caps=False):
         return stateDescription(self.state,count,caps)
