@@ -225,6 +225,48 @@ class Claim(object):
 
         return s
 
+    def compatible(self,otherclaim):
+        """
+        Determine if two claims are compatible, i.e., of the same claim id, and not 'None'.
+        """
+        if self.id == None:
+            # No id yet
+            return False
+
+        if self.id != otherclaim.id:
+            # Trying to merge two different claims, fail
+            return False
+
+        return True
+
+    def merge(self,otherclaim):
+        """
+        Merge two claim objects if possible.
+
+        If succeeded, return True, and the main claim is updated to include otherclaim. Otherclaim can now be dropped.
+        If failed, return False, main claim unchanged.
+
+        If the claims are not the same id (not compatible), there is nothing to merge.
+        """
+        if otherclaim.id == None:
+            return True     # Other claim is empty, merge is trivial (i.e., we can drop otherclaim)
+        if not self.compatible(otherclaim):
+            return False    # Not the same claim id or no id
+
+        # Merge attacks/characterisations and then later reconstruct judgements from that
+        self.failed = self.failed + otherclaim.failed
+        self.count = self.count + otherclaim.count
+        self.states = self.states + otherclaim.states
+        self.complete = self.complete and otherclaim.complete
+        self.timebound = self.timebound or otherclaim.timebound
+        self.attacks = mergeAttacks(self.attacks, otherclaim.attacks)
+
+        # Reconstruct derived info
+        self.deriveInfo()
+
+
+
+
 
 #---------------------------------------------------------------------------
 
