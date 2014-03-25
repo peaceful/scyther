@@ -30,12 +30,6 @@ import os.path
 import sys
 import StringIO
 import tempfile
-try:
-    import hashlib
-    HASHLIB = True
-except ImportError:
-    HASHLIB = False
-    pass
 
 #---------------------------------------------------------------------------
 
