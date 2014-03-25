@@ -44,6 +44,7 @@ import XMLReader
 import Error
 import Claim
 from ScytherCached import getScytherBackend,doScytherCommand
+from ScytherParallell import doScytherVerify
 from Misc import *
 
 #---------------------------------------------------------------------------
@@ -99,12 +100,8 @@ class Scyther(object):
         self.errors = None
         self.errorcount = 0
         self.warnings = None
-        self.run = False
         self.output = None
         self.cmd = None
-
-        # defaults
-        self.xml = True     # this results in a claim end, otherwise we simply get the output
 
     def setInput(self,spdl):
         self.spdl = spdl
@@ -181,64 +178,31 @@ class Scyther(object):
         self.sanitize()
     
         # prepare arguments
-        args = ""
-        if self.xml:
-            args += " --dot-output --xml-output --plain"
+        args = " --dot-output --plain"
         args += " %s" % self.options
         if extraoptions:
             # extraoptions might need sanitizing
             args += " %s" % EnsureString(extraoptions)
 
-        # Are we only checking the cache?
-        if checkKnown == True:
-            return doScytherCommand(self.spdl, args, checkKnown=checkKnown,useCache=useCache)
+        # Do the actual verification
+        (output,claims,errors,warnings) = doScytherVerify(self.spdl,args,checkKnown=checkKnown,useCache=useCache)
 
-        # execute
-        (output,errors) = doScytherCommand(self.spdl, args, useCache=useCache)
-        self.run = True
+        self.errors = errors
+        self.warnings = warnings
 
-        # process errors
-        self.errors = []
-        self.warnings = []
-        for l in errors.splitlines():
-            line = l.strip()
-            if len(line) > 0:
-                # filter out any non-errors (say maybe only claim etc) and count
-                # them.
-                if line.startswith("claim\t"):
-                    # Claims are lost, reconstructed from the XML output
-                    pass
-                elif line.startswith("warning"):
-                    # Warnings are stored seperately
-                    self.warnings.append(line)
-                else:
-                    # otherwise it is an error
-                    self.errors.append(line)
-
+        # Raise an error in case of trouble
         self.errorcount = len(self.errors)
         if self.errorcount > 0:
             raise Error.ScytherError(self.errors,filenames=self.filenames,options=self.options)
 
-        # process output
+        self.claims = claims
         self.output = output
-        self.validxml = False
-        self.claims = []
-        if self.xml:
-            if len(output) > 0:
-                if output.startswith("<scyther>"):
 
-                    # whoohee, xml
-                    self.validxml = True
-
-                    xmlfile = StringIO.StringIO(output)
-                    reader = XMLReader.XMLReader()
-                    self.claims = reader.readXML(xmlfile)
-
-        # Determine what should be the result
-        if self.xml:
-            return self.claims
+        if claims != None:
+            return claims
         else:
-            return self.output
+            return output
+
 
     def verifyOne(self,cl=None,checkKnown=False):
         """
@@ -266,7 +230,6 @@ class Scyther(object):
         if self.errorcount > 0:
             return None
         else:
-            self.validxml = False   # Signal that we should not interpret the output as XML
             return self.claims
 
     def getClaim(self,claimid):
@@ -277,19 +240,16 @@ class Scyther(object):
         return None
 
     def __str__(self):
-        if self.run:
-            if self.errorcount > 0:
-                return "%i errors:\n%s" % (self.errorcount, "\n".join(self.errors))
-            else:
-                if self.xml and self.validxml:
-                    s = "Verification results:\n"
-                    for cl in self.claims:
-                        s += str(cl) + "\n"
-                    return s
-                else:
-                    return self.output
+        if self.errorcount > 0:
+            return "%i errors:\n%s" % (self.errorcount, "\n".join(self.errors))
         else:
-            return "Scyther has not been run yet."
+            if self.claims != None:
+                s = "Verification results:\n"
+                for cl in self.claims:
+                    s += str(cl) + "\n"
+                return s
+            else:
+                return self.output
 
 #---------------------------------------------------------------------------
 
