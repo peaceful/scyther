@@ -52,82 +52,13 @@ from Misc import *
 Globals
 """
 
-FirstCheck = True
-
-#---------------------------------------------------------------------------
-
-"""
-Get current directory (for this file)
-"""
-def getMyDir():
-    return os.path.dirname( os.path.realpath( __file__ ) )
-
-"""
-The default path for the binaries is the current one.
-"""
-def getBinDir():
-    return getMyDir()
-
-"""
-Return Cache prefix path
-Returns None if not existent
-"""
-def getCacheDir():
-    
-    tmpdir = None
-
-    # Check if user chose the path
-    cachedirkey = "SCYTHERCACHEDIR"
-    if cachedirkey in os.environ.keys():
-        tmpdir = os.environ[cachedirkey]
-        if tmpdir == "":
-            # Special value: if the variable is present, but equals the empty string, we disable caching.
-            return None
-    else:
-        # Otherwise take from path
-        tmpdir = tempfile.gettempdir()
-    
-    # If not none, append special name
-    if tmpdir != None:
-        tmpdir = os.path.join(tmpdir,"Scyther-cache")
-
-    return tmpdir
-
-    
-
 #---------------------------------------------------------------------------
 
 def Check():
     """
-    Various dynamic checks that can be performed before starting the
-    backend.
+    Perform sanity check on Scyther backend.
     """
-
-    global FirstCheck
-
-    # First time
-    if FirstCheck:
-        """
-        Perform any checks that only need to be done the first time.
-        """
-        FirstCheck = False
-
-    # Every time
-    
-    # Check Scyther backend program availability
-    program = getScytherBackend()
-    CheckSanity(program)
-
-
-#---------------------------------------------------------------------------
-
-def CheckSanity(program):
-    """
-    This is where the existence is checked of the Scyther backend.
-    """
-
-    if not os.path.isfile(program):
-        raise Error.BinaryError, program
+    program = getScytherBackend()   # Raises an error if the backend is not found or is not executable
 
 #---------------------------------------------------------------------------
 
@@ -151,37 +82,6 @@ def EnsureString(x,sep=" "):
 
     else:
         raise Error.StringListError, x
-
-
-#---------------------------------------------------------------------------
-
-def getScytherBackend():
-    # Where is my executable?
-    #
-    # Auto-detect platform and infer executable name from that
-    #
-    if "linux" in sys.platform:
-
-        """ linux """
-        scythername = "scyther-linux"
-
-    elif "darwin" in sys.platform:
-
-        """ OS X """
-        scythername = "scyther-mac"
-
-    elif sys.platform.startswith('win'):
-
-        """ Windows """
-        scythername = "scyther-w32.exe"
-
-    else:
-
-        """ Unsupported"""
-        raise Error.UnknownPlatformError, sys.platform
-
-    program = os.path.join(getBinDir(),scythername)
-    return program
 
 
 #---------------------------------------------------------------------------
