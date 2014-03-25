@@ -267,7 +267,10 @@ def intruderConstant(t):
     global RUNIDMAX
 
     if isinstance(t,Term.TermConstant):
-        return (int(t.runid) > RUNIDMAX)
+        try:
+            return (int(t.runid) > RUNIDMAX)
+        except:
+            pass
     return False
 
 def SaneTerm(x):
