@@ -19,7 +19,12 @@
 """
 
 #
-# Scyther interface
+# Scyther commands with caching.
+#
+# Main functions:
+#
+#   doScytherCommand
+#   getScytherBackend
 #
 
 #---------------------------------------------------------------------------
