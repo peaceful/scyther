@@ -1,78 +1,72 @@
-/*
- * KSL from SPORE
- *
- * Messages 6-8 are intended for repeated authentication, and there are
- * known attacks on this. However, we don't model that yet.
- *
- * Furthermore, it is interesting to experiment here with key
- * compromise (of kab), when this is implemented in Scyther.
- */
+# KSL
+#
+# Modelled after the description in the SPORE library
+# http://www.lsv.ens-cachan.fr/spore/ksl.html
+#
+#
 
-usertype Server, SessionKey, GeneralizedTimestamp, Ticket, TicketKey;
-secret k: Function;
 
-const s: Server;
+usertype Server, SessionKey, TimeStamp, TicketKey;
+usertype ExpiredTimeStamp;
 
-/* give the intruder something to work with */
+const Fresh: Function;
+const Compromised: Function;
 
-const kee: SessionKey;
-untrusted e;
-compromised k(e,s);
-
-protocol ksl(A,B,S)
+protocol ksl(I,R,S)
 {
-	role A
-	{
-		fresh Na, Ma: Nonce;
-		var Nc, Mb: Nonce;
-		var T: Ticket;
-		var Kab: SessionKey;
-		
-		send_1(A,B, Na, A);
-		recv_4(B,A, { Na,B,Kab }k(A,S), T, Nc, {Na}Kab );
-		send_5(A,B, { Nc }Kab );
-		
-		send_6(A,B, Ma,T );
-		recv_7(B,A, Mb,{Ma}Kab );
-		send_8(A,B, {Mb}Kab );
+    role I
+    {
+        fresh Ni, Mi: Nonce;
+        var Nc, Mr: Nonce;
+        var T: Ticket;
+        var Kir: SessionKey;
+        
+        send_1(I,R, Ni, I);
+        recv_4(R,I, { Ni,R,Kir }k(I,S), T, Nc, {Ni}Kir );
+        send_5(I,R, { Nc }Kir );
+        
+        send_6(I,R, Mi,T );
+        recv_7(R,I, Mr,{Mi}Kir );
+        send_8(I,R, {Mr}Kir );
 
-		claim_A1(A,Secret, Kab);
-		claim_A2(A,Niagree);
-		claim_A3(A,Nisynch);
-	}
+        claim_I1(I,Secret, Kir);
+        claim_I2(I,Niagree);
+        claim_I3(I,Nisynch);
+        claim_I4(I,Empty, (Fresh, Kir));
+    }
 
-	role B
-	{
-		var Na,Ma: Nonce;
-		fresh Nb,Nc,Mb: Nonce;
-		var Kab: SessionKey;
-		fresh Kbb: TicketKey;
-		fresh Tb: GeneralizedTimestamp;
-		var T: Ticket;
-		
-		recv_1(A,B, Na, A);
-		send_2(B,S, Na, A, Nb, B );
-		recv_3(S,B, { Nb, A, Kab }k(B,S), T );
-		send_4(B,A, T, { Tb, A, Kab }Kbb, Nc, {Na}Kab );
-		recv_5(A,B, { Nc }Kab );
-		
-		recv_6(A,B, Ma,{ Tb, A, Kab }Kbb );
-		send_7(B,A, Mb,{Ma}Kab );
-		recv_8(A,B, {Mb}Kab );
+    role R
+    {
+        var Ni,Mi: Nonce;
+        fresh Nr,Nc,Mr: Nonce;
+        var Kir: SessionKey;
+        fresh Kbb: TicketKey;
+        fresh Tr: TimeStamp;
+        var T: Ticket;
+        
+        recv_1(I,R, Ni, I);
+        send_2(R,S, Ni, I, Nr, R );
+        recv_3(S,R, { Nr, I, Kir }k(R,S), T );
+        send_4(R,I, T, { Tr, I, Kir }Kbb, Nc, {Ni}Kir );
+        recv_5(I,R, { Nc }Kir );
+        
+        recv_6(I,R, Mi,{ Tr, I, Kir }Kbb );
+        send_7(R,I, Mr,{Mi}Kir );
+        recv_8(I,R, {Mr}Kir );
 
-		claim_B1(B,Secret, Kab);
-		claim_B2(B,Niagree);
-		claim_B3(B,Nisynch);
-	}
+        claim_R1(R,Secret, Kir);
+        claim_R2(R,Niagree);
+        claim_R3(R,Nisynch);
+        claim_R4(R,Empty,(Fresh,Kir));
+    }
 
-	role S
-	{
-		var Na, Nb: Nonce;
-		fresh Kab: SessionKey;
+    role S
+    {
+        var Ni, Nr: Nonce;
+        fresh Kir: SessionKey;
 
-		recv_2(B,S, Na, A, Nb, B );
-		send_3(S,B, { Nb, A, Kab }k(B,S), { Na,B,Kab }k(A,S) );
-	}
+        recv_2(R,S, Ni, I, Nr, R );
+        send_3(S,R, { Nr, I, Kir }k(R,S), { Ni,R,Kir }k(I,S) );
+    }
 }
-
 
