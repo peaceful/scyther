@@ -26,6 +26,9 @@
 #
 #   doScytherVerify
 #
+# An optional file 'pparams.txt' indicates the parallellistion parameters, where the first
+# line contains the modulus and the second line contains the prefix length.
+#
 
 #---------------------------------------------------------------------------
 
@@ -124,6 +127,26 @@ def generateChoices(modulus,seqlen,prefix=[]):
 
 #---------------------------------------------------------------------------
 
+def getParameters():
+    """
+    Return the modulus and the sequence length
+    """
+    N = 2
+    ln = 6
+    try:
+        fp = open("pparams.txt",'r')
+        l = fp.readlines()
+        N = int(l[0])
+        ln = int(l[1])
+        #print "Read parameters:", N, ln
+        fp.close()
+    except None:
+        pass
+
+    return (N,ln)
+
+#---------------------------------------------------------------------------
+
 def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True):
     """
     Interface to wrap the parallellisation
@@ -136,7 +159,8 @@ def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True):
 
     # From this point on we assume the worker returns a four-tuple.
     
-    switchlist = generateChoices(2,6)
+    (N,ln) = getParameters()
+    switchlist = generateChoices(N,ln)
     arglist = []
     for sw in switchlist:
         arglist.append((spdl,"%s %s" % (args,sw),checkKnown,useCache))
