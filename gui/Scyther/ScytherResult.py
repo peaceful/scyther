@@ -98,7 +98,15 @@ def mergeOutputs(o1,o2):
     return revertSplit(res)
 
 def mergeClaims(l1,l2=[]):
+    if l1 == None:
+        l1 = []
+    if l2 == None:
+        l2 = []
+    
     allclaims = l1 + l2
+    if len(allclaims) == 0:
+        return None
+
     res = []
     for cl in allclaims:
         merged = False
