@@ -94,31 +94,6 @@ prune_bounds (const System sys)
       return 1;
     }
 
-  /* prune for prefix filter */
-  if (switches.prefixFilterLength > 0)
-    {
-      if (sys->choicePathLength <= switches.prefixFilterLength)
-	{
-	  // The last element of the choice path is still within the length of the filter
-	  if (sys->choicePathLength > 0)
-	    {
-	      // There is a last element
-	      if ((sys->choicePath->value % switches.prefixFilterModulus) !=
-		  switches.prefixFilter[sys->choicePathLength - 1])
-		{
-		  // Value does not match filter, abort
-		  if (switches.output == PROOF)
-		    {
-		      indentPrint ();
-		      eprintf
-			("Pruned: choice path does not match filter.\n");
-		    }
-		  return 1;
-		}
-	    }
-	}
-    }
-
   /* prune for trace length */
   if (switches.maxtracelength < INT_MAX)
     {

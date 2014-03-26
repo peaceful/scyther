@@ -318,6 +318,37 @@ prune_theorems (const System sys)
   int run;
   int *partners;
 
+  // prune for prefix filter 
+  /**
+   * Note that this may not seem a theorem. It is not. The reason this filter is presented here 
+   * is because we consider it the user's responsibility to combine the results from different filter paths.
+   * Thus, we assume the filter to be an environment assumption for the resulting implicit proof.
+   * If all prefixes are combined, we get a complete result (proof).
+   */
+  if (switches.prefixFilterLength > 0)
+    {
+      if (sys->choicePathLength <= switches.prefixFilterLength)
+	{
+	  // The last element of the choice path is still within the length of the filter
+	  if (sys->choicePathLength > 0)
+	    {
+	      // There is a last element
+	      if ((sys->choicePath->value % switches.prefixFilterModulus) !=
+		  switches.prefixFilter[sys->choicePathLength - 1])
+		{
+		  // Value does not match filter, abort
+		  if (switches.output == PROOF)
+		    {
+		      indentPrint ();
+		      eprintf
+			("Pruned: choice path does not match filter.\n");
+		    }
+		  return 1;
+		}
+	    }
+	}
+    }
+
   // Check all types of the local agents according to the matching type
   if (!checkAllSubstitutions (sys))
     {
