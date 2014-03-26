@@ -26,8 +26,9 @@
 #
 #   doScytherVerify
 #
-# An optional file 'pparams.txt' indicates the parallellistion parameters, where the first
-# line contains the modulus and the second line contains the prefix length.
+# An optional file 'pparams.txt' indicates the parallellistion parameters,
+# where the first line contains the worker count (set 0 to get cpu_count), the
+# modulus, and the prefix length, separated by space.
 #
 
 #---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ import os
 import os.path
 import sys
 import StringIO
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 #---------------------------------------------------------------------------
 
@@ -131,19 +132,24 @@ def getParameters():
     """
     Return the modulus and the sequence length
     """
+    M = cpu_count()     # TODO: May raise NotImplementedError, ignoring for now.
     N = 2
     ln = 6
     try:
         fp = open("pparams.txt",'r')
         l = fp.readlines()
-        N = int(l[0])
-        ln = int(l[1])
-        #print "Read parameters:", N, ln
+        dt = l[0].split()   # split first line according to spaces
+        Mtry = int(dt[0])
+        if Mtry > 0:
+            M = Mtry
+        N = int(dt[1])
+        ln = int(dt[2])
+        #print "Read parameters:", M, N, ln
         fp.close()
     except None:
         pass
 
-    return (N,ln)
+    return (M,N,ln)
 
 #---------------------------------------------------------------------------
 
@@ -159,13 +165,13 @@ def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True):
 
     # From this point on we assume the worker returns a four-tuple.
     
-    (N,ln) = getParameters()
+    (M,N,ln) = getParameters()
     switchlist = generateChoices(N,ln)
     arglist = []
     for sw in switchlist:
         arglist.append((spdl,"%s %s" % (args,sw),checkKnown,useCache))
 
-    pool = Pool()
+    pool = Pool(M)
     reslist = pool.map(doScytherVerifyWorker,arglist)
 
     res = None
