@@ -264,7 +264,7 @@ class Claim(object):
         # Reconstruct derived info
         self.deriveInfo()
 
-
+        return True
 
 
 
