@@ -179,23 +179,27 @@ class Scyther(object):
             args += " %s" % EnsureString(extraoptions)
 
         # Do the actual verification
-        (output,claims,errors,warnings) = doScytherVerify(self.spdl,args,checkKnown=checkKnown,useCache=useCache)
+        scyres = doScytherVerify(self.spdl,args,checkKnown=checkKnown,useCache=useCache)
 
-        self.errors = errors
-        self.warnings = warnings
+        # If checkKnown was True, the result might be a boolean
+        if scyres.isBool():
+            return scyres.value
+
+        self.errors = scyres.errors
+        self.warnings = scyres.warnings
 
         # Raise an error in case of trouble
         self.errorcount = len(self.errors)
         if self.errorcount > 0:
             raise Error.ScytherError(self.errors,filenames=self.filenames,options=self.options)
 
-        self.claims = claims
-        self.output = output
+        self.claims = scyres.claims
+        self.output = scyres.output
 
-        if claims != None:
-            return claims
+        if self.claims != None:
+            return self.claims
         else:
-            return output
+            return self.output
 
 
     def verifyOne(self,cl=None,checkKnown=False):

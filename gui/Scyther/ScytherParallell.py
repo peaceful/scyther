@@ -34,6 +34,7 @@ import os
 import os.path
 import sys
 import StringIO
+from multiprocessing import Pool
 
 #---------------------------------------------------------------------------
 
@@ -43,6 +44,7 @@ import Error
 import Claim
 from ScytherCached import getScytherBackend,doScytherCommand
 from Misc import *
+from ScytherResult import makeScytherResult
 
 #---------------------------------------------------------------------------
 
@@ -52,13 +54,13 @@ Globals
 
 #---------------------------------------------------------------------------
 
-def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True,xml=True):
+def doScytherVerifyWorker((spdl,args,checkKnown,useCache)):
     """ Should return a list of results.
 
         If checkKnown == True, we do not call Scyther, but just check the cache, and return True iff the result is in the cache.
         If useCache == False, don't use the cache at all.
 
-        return (output,claims,myerrors,mywarnings)
+        return ScytherResult object
     """
 
     # We do want XML output in any case
@@ -67,9 +69,9 @@ def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True,xml=True):
     # execute
     result = doScytherCommand(spdl, xargs, checkKnown=checkKnown,useCache=useCache)
 
-    # If we are using checkKnown, we're only looking for a boolean result.
-    if checkKnown == True:
-        return result
+    # If we are using checkKnown, we get a boolean result.
+    if isinstance(result,bool):
+        return makeScytherResult(result)
 
     # Otherwise the result should be a pair
     (output,errors) = result
@@ -102,7 +104,62 @@ def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True,xml=True):
             reader = XMLReader.XMLReader()
             claims = reader.readXML(xmlfile)
 
-    return (output,claims,myerrors,mywarnings)
+    return makeScytherResult((output,claims,myerrors,mywarnings))
+
+#---------------------------------------------------------------------------
+
+def generateChoices(modulus,seqlen,prefix=[]):
+    """
+    Generate switch prefixes
+    """
+    if len(prefix) >= seqlen:
+
+        return ["--prefix-filter=%i:%s" % (modulus,",".join(map(str,prefix)))]
+
+    else:
+        res = []
+        for i in range(0,modulus):
+            res = res + generateChoices(modulus,seqlen,prefix + [i])
+        return res
+
+#---------------------------------------------------------------------------
+
+def doScytherVerify(spdl=None,args="",checkKnown=False,useCache=True):
+    """
+    Interface to wrap the parallellisation
+
+    TODO: Ideally the cache should wrap around the parallellisation, to avoid forking. Now it is the other way around.
+    """
+    if checkKnown == True:
+        # Nothing to parallellise for cache checking
+        return doScytherVerifyWorker((spdl,args,checkKnown,useCache))
+
+    # From this point on we assume the worker returns a four-tuple.
+    
+    switchlist = generateChoices(2,6)
+    arglist = []
+    for sw in switchlist:
+        arglist.append((spdl,"%s %s" % (args,sw),checkKnown,useCache))
+
+    pool = Pool()
+    reslist = pool.map(doScytherVerifyWorker,arglist)
+
+    res = None
+    for ires in reslist:
+        ires.merge(res)
+        res = ires
+    return res
+
+    #res = None
+    #for sw in switchlist:
+    #    print "Prefix filter:", sw
+    #    newres = doScytherVerifyWorker(spdl=spdl,args="%s %s" % (args,sw),checkKnown=checkKnown,useCache=useCache)
+    #    newres.merge(res)
+    #    res = newres
+    #return res
+
+
+
 
 #---------------------------------------------------------------------------
 

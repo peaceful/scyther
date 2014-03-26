@@ -18,255 +18,104 @@
 """
 
 #
-# Claim
+# Scyther Result
 #
 
-import Term
+class ScytherResult(object):
+    def isBool(self):
+        return False
 
-def stateDescription(okay,n=1,caps=False):
-    if okay:
-        s = "trace pattern"
-        if n != 1:
-            s += "s"
-    else:
-        s = "attack"
-        if n != 1:
-            s += "s"
-    if caps:
-        s = s[0].upper() + s[1:]
-    return s
+class ScytherResultBool(ScytherResult):
+    def __init__(self,b):
+        self.value = b
 
+    def result(self):
+        return self.value
 
-def mergeAttacks(al1,al2):
-    """
-    Merge two attack lists.
-
-    This is not simply a concatenation because the attacks may be decreasing in cost in each list.
-
-    TODO: Attack output in XML from Scyther should include cost and this should be parsed by the XML reader.
-
-    For now, we do a simple hack, which is a zipped merge from the back, working from the decreasing cost assumption.
-    """
-    i1 = len(al1)-1
-    i2 = len(al2)-1
-    res = []    # We're going to build it in reverse, since append is faster
-    while i1 + i2 > 0:
-        if i1 > 0:
-            res.append(al1[i1])
-            i1 = i1 - 1
-        if i2 > 0:
-            res.append(al2[i2])
-            i2 = i2 - 1
-    res.reverse()
-    return res
-    
-
-class Claim(object):
-    def __init__(self):
-        # Identification
-        self.id = None          # a unique id string, consisting of 'protocol,label'
-        self.claimtype = None
-        self.label = None
-        self.shortlabel = None
-        self.protocol = None
-        self.role = None
-        self.parameter = None
-
-        # Results
-        self.failed = 0
-        self.count = 0
-        self.states = 0
-        self.complete = False
-        self.timebound = False
-        self.attacks = []
-
-        # derived info
-        self.state = False      # if true, it is a state, not an attack
-        self.okay = None        # true if good, false if bad
-        self.foundstates = False
-        self.foundproof = False
-
-    def deriveInfo(self):
-        """
-        Derive information
-        """
-        # some additional properties
-        self.state = (str(self.claimtype) == 'Reachable')
-        self.foundstates = (self.failed > 0)
-        self.foundproof = (self.complete)
-
-        # status
-        # normally, with attacks, okay means none
-        self.okay = (self.failed == 0)
-        if self.state:
-            # but the logic reverses when it is states and not
-            # attacks...
-            self.okay = (not self.okay)
-
-    def analyze(self):
-
-        # determine short label
-        # We need the rightmost thingy here
-        label = self.label
-        while isinstance(label,Term.TermTuple):
-            label = label[1]
-        self.shortlabel = label
-
-        # determine id
-        self.id = "%s,%s" % (self.protocol,self.shortlabel)
-
-        self.deriveInfo()
-
-
-    def stateName(self,count=1,caps=False):
-        return stateDescription(self.state,count,caps)
-
-    def getRank(self):
-        """
-        Return claim rank
-        0 - really failed
-        1 - probably failed
-        2 - probably okay
-        3 - really okay
-        """
-        n = len(self.attacks)
-        if not self.okay:
-            # not okay
-            if (self.state and self.complete) or ((not self.state) and (n > 0)):
-                return 0
-            else:
-                return 1
-        else:
-            # okay!
-            if not ((self.state and (n > 0)) or ((not self.state) and self.complete)):
-                return 2
-            else:
-                return 3
-
-    def getVerified(self):
-        """
-        returns an element of [None,'Verified','Falsified']
-        """
-        opts = ['Falsified',None,None,'Verified']
-        return opts[self.getRank()]
-
-
-    def getColour(self):
-        """
-        Returns a colour that expresses the state
-        """
-        colours = ['#FF0000',
-                   '#800000',
-                   '#005800',
-                   '#00B000']
-        return colours[self.getRank()]
-
-    def getOkay(self):
-        """
-        Returns a very brief statement about the claim.
-
-        Originally the two mid options had a question mark appended, but
-        from a users' point of view this might only be more confusing,
-        so I took them out again.
-        """
-        colours = ['Fail',
-                   'Fail',
-                   'Ok',
-                   'Ok']
-        return colours[self.getRank()]
-
-    def getComment(self):
-        """
-        returns a sentence describing the results for this claim
-        """
-        n = len(self.attacks)
-        atxt = self.stateName(n)
-        remark = ""
-        if not self.complete:
-            if n == 0:
-                # no attacks, no states within bounds
-                remark = "No %s within bounds" % (atxt)
-            else:
-                # some attacks/states within bounds
-                remark = "At least %i %s" % (n,atxt)
-        else:
-            if n == 0:
-                # no attacks, no states
-                remark = "No %s" % (atxt)
-            else:
-                # there exist n states/attacks (within any number of runs)
-                remark = "Exactly %i %s" % (n,atxt)
-        return remark + "."
-
-    def triplet(self):
-        """
-        Return protocol,role,label triplet
-        """
-        return (self.protocol, self.role, self.shortlabel)
-
-    def describe(self):
-        s = str(self.claimtype)
-        if self.parameter:
-            s+= "(%s)" % self.parameter
-
-        return s
-
-    def roledescribe(self):
-        return "%s: %s" % (self.role,self.describe())
-
-    def __str__(self):
-        """
-        Resulting string
-        """
-        s = "claim id [%s], %s" % (self.id,self.describe())
-
-        # determine status
-        s+= "\t: %s" % self.getComment()
-
-        return s
-
-    def compatible(self,otherclaim):
-        """
-        Determine if two claims are compatible, i.e., of the same claim id, and not 'None'.
-        """
-        if self.id == None:
-            # No id yet
-            return False
-
-        if self.id != otherclaim.id:
-            # Trying to merge two different claims, fail
-            return False
-
+    def isBool(self):
         return True
 
-    def merge(self,otherclaim):
-        """
-        Merge two claim objects if possible.
+    def merge(self,other):
+        assert(isinstance(other,ScytherResultBool))
+        self.value = self.value and other.value
 
-        If succeeded, return True, and the main claim is updated to include otherclaim. Otherclaim can now be dropped.
-        If failed, return False, main claim unchanged.
+class ScytherResultTuple(ScytherResult):
+    def __init__(self,(output,claims,errors,warnings)):
+        self.output = output
+        self.claims = claims
+        self.errors = errors
+        self.warnings = warnings
 
-        If the claims are not the same id (not compatible), there is nothing to merge.
-        """
-        if otherclaim.id == None:
-            return True     # Other claim is empty, merge is trivial (i.e., we can drop otherclaim)
-        if not self.compatible(otherclaim):
-            return False    # Not the same claim id or no id
+    def merge(self,other):
+        if other == None:
+            # Allow mergine with none for bootstrapping sequence merges
+            return
+        assert(isinstance(other,ScytherResultTuple))
+        self.output = mergeOutputs(self.output,other.output)
+        self.claims = mergeClaims(self.claims,other.claims)
+        self.errors = mergeLines(self.errors,other.errors)
+        self.warnings = mergeLines(self.warnings,other.warnings)
 
-        # Merge attacks/characterisations and then later reconstruct judgements from that
-        self.failed = self.failed + otherclaim.failed
-        self.count = self.count + otherclaim.count
-        self.states = self.states + otherclaim.states
-        self.complete = self.complete and otherclaim.complete
-        self.timebound = self.timebound or otherclaim.timebound
-        self.attacks = mergeAttacks(self.attacks, otherclaim.attacks)
+def makeScytherResult(rv):
+    if isinstance(rv,bool):
+        return ScytherResultBool(rv)
+    else:
+        return ScytherResultTuple(rv)
 
-        # Reconstruct derived info
-        self.deriveInfo()
+#---------------------------------------------------------------------------
 
+def findPrefix(o,prefix):
+    for (i,l) in enumerate(o):
+        if l.startswith(prefix):
+            return i
+    return -1
 
+def cleverCombine(l1,l2,i):
+    if "At least" in l1:
+        return l1
+    if "within bounds" in l2:
+        return l1
+    return l2
 
+def revertSplit(ll):
+    res = ""
+    for l in ll:
+        res += l + "\n"
+    return res
 
+def mergeOutputs(o1,o2):
+    res = o1.splitlines()
+    for l in o2.splitlines():
+        if l not in res:
+            if l.startswith("claim"):
+                i = l.find(":")
+                if i >= 0:
+                    n = findPrefix(res,l[:i+1])
+                    if n >= 0:
+                        res[n] = cleverCombine(res[n],l,i)
+                        continue
+            res.append(l)
+    return revertSplit(res)
+
+def mergeClaims(l1,l2=[]):
+    allclaims = l1 + l2
+    res = []
+    for cl in allclaims:
+        merged = False
+        for clx in res:
+            if clx.merge(cl):
+                merged = True
+                break
+        if not merged:
+            res.append(cl)
+    return res
+
+def mergeLines(l1,l2):
+    res = l1[:]
+    for ll in l2:
+        if ll not in res:
+            res.append(ll)
+    return res
 
 #---------------------------------------------------------------------------
 
