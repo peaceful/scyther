@@ -135,9 +135,9 @@ def getParameters():
     Currently, there is a default, but it can also be set through a file or
     through environment variables:
 
-        SCYTHERPARALLELN    worker count
-        SCYTHERPARALLELM    modulus
-        SCYTHERPARALLELL    sequence length
+        SCYTHERPARALLELLN    worker count
+        SCYTHERPARALLELLM    modulus
+        SCYTHERPARALLELLL    sequence length
 
     """
     workercount = 0
