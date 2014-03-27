@@ -130,26 +130,48 @@ def generateChoices(modulus,seqlen,prefix=[]):
 
 def getParameters():
     """
-    Return the modulus and the sequence length
+    Return the worker count, the modulus and the sequence length
+
+    Currently, there is a default, but it can also be set through a file or
+    through environment variables:
+
+        SCYTHERPARALLELN    worker count
+        SCYTHERPARALLELM    modulus
+        SCYTHERPARALLELL    sequence length
+
     """
-    M = cpu_count()     # TODO: May raise NotImplementedError, ignoring for now.
-    N = 2
-    ln = 6
+    workercount = 0
+    modulus = 2
+    slength = 6
     try:
         fp = open("pparams.txt",'r')
         l = fp.readlines()
         dt = l[0].split()   # split first line according to spaces
         Mtry = int(dt[0])
         if Mtry > 0:
-            M = Mtry
-        N = int(dt[1])
-        ln = int(dt[2])
-        #print "Read parameters:", M, N, ln
+            workercount = Mtry
+        modulus = int(dt[1])
+        slength = int(dt[2])
+        #print "Read parameters:", workercount, modulus, slength
         fp.close()
     except None:
         pass
 
-    return (M,N,ln)
+    # Check environment variables override for workercount,modulus,slength
+    prefix = "SCYTHERPARALLELL"
+    if prefix + "N" in os.environ.keys():
+        workercount = int(os.environ[prefix + "N"])
+    if prefix + "M" in os.environ.keys():
+        # Note: a choice of '0' will lead to an error (no paths evaluated, empty claim result)
+        modulus = int(os.environ[prefix + "M"])
+    if prefix + "L" in os.environ.keys():
+        slength = int(os.environ[prefix + "L"])
+
+    # Workercount of 0 should go to cpu_count
+    if workercount < 1:
+        workercount = cpu_count()     # TODO: May raise NotImplementedError, ignoring for now.
+
+    return (workercount,modulus,slength)
 
 #---------------------------------------------------------------------------
 
