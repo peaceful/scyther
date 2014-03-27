@@ -132,33 +132,20 @@ def getParameters():
     """
     Return the worker count, the modulus and the sequence length
 
-    Currently, there is a default, but it can also be set through a file or
+    Currently, there is a default, but it can also be set 
     through environment variables:
 
-        SCYTHERPARALLELLN    worker count
-        SCYTHERPARALLELLM    modulus
-        SCYTHERPARALLELLL    sequence length
+        SCYTHERPARALLELN    worker count
+        SCYTHERPARALLELM    modulus
+        SCYTHERPARALLELL    sequence length
 
     """
     workercount = 0
     modulus = 2
     slength = 6
-    try:
-        fp = open("pparams.txt",'r')
-        l = fp.readlines()
-        dt = l[0].split()   # split first line according to spaces
-        Mtry = int(dt[0])
-        if Mtry > 0:
-            workercount = Mtry
-        modulus = int(dt[1])
-        slength = int(dt[2])
-        #print "Read parameters:", workercount, modulus, slength
-        fp.close()
-    except None:
-        pass
 
     # Check environment variables override for workercount,modulus,slength
-    prefix = "SCYTHERPARALLELL"
+    prefix = "SCYTHERPARALLEL"
     if prefix + "N" in os.environ.keys():
         workercount = int(os.environ[prefix + "N"])
     if prefix + "M" in os.environ.keys():
