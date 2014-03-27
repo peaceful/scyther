@@ -38,7 +38,7 @@ import XMLReader
 import Error
 import Claim
 from ScytherCached import getScytherBackend,doScytherCommand
-from ScytherParallell import doScytherVerify
+from ScytherParallel import doScytherVerify
 from Misc import *
 
 #---------------------------------------------------------------------------
