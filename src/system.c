@@ -43,6 +43,8 @@ int protocolCount;
 //! External
 extern Protocol INTRUDER;
 
+//! Switch for indent or not.
+static int indentState = 0;
 //! Current indent depth.
 static int indentDepth = 0;
 
@@ -51,7 +53,7 @@ static int indentDepth = 0;
  *@return A system structure pointer with initial values.
  */
 System
-systemInit ()
+systemInit()
 {
   System sys = (System) malloc (sizeof (struct system));
 
@@ -83,7 +85,7 @@ systemInit ()
   sys->attackid = 0;		// First attack will have id 1, because the counter is increased before any attacks are displayed.
 
   /* arachne assist */
-  bindingInit (sys);
+  //bindingInit (sys);
   sys->bindings = NULL;
   sys->current_claim = NULL;
   sys->trustedRoles = NULL;
@@ -406,6 +408,7 @@ run_prefix_recv (const System sys, const int run, Roledef rd,
       Roledef rdnew;
 
       rdnew = roledefInit (RECV, NULL, NULL, NULL, extterm, NULL);
+
       /* this is an internal action! */
       rdnew->internal = 1;
       /* Store this new pointer */
@@ -426,6 +429,22 @@ run_prefix_recv (const System sys, const int run, Roledef rd,
  * Furthermore, localizes all substitutions occurring in this, which termLocal
  * does not. Any localized substitutions are stored as well in a list.
  */
+/*
+Termlist updateSubst(Termlist substlist, Termlist tl)
+{
+	Termlist tl1 = tl;
+	   while(tl1!=NULL)
+	   {
+		   Termlist tmp = termlistFind(substlist, tl1->term);
+		   if(tmp!=NULL)
+		   {
+			   tmp->term->subst = substlist->term->subst;
+		   }
+		   tl1 = tl1->next;
+	   }
+	return tl;
+}
+*/
 void
 run_localize (const System sys, const int rid, Termlist fromlist,
 	      Termlist tolist, Termlist substlist)
@@ -461,6 +480,8 @@ run_localize (const System sys, const int rid, Termlist fromlist,
 	}
       substlist = substlist->next;
     }
+   //updateSubst(substlist,sys->runs[rid].sigma);
+   //updateSubst(substlist,sys->runs[rid].rho);
 }
 
 
@@ -482,7 +503,6 @@ roleInstanceArachne (const System sys, const Protocol protocol,
   Termlist fromlist = NULL;	// deleted at the end
   Termlist tolist = NULL;	// -> .locals
   Term extterm = NULL;		// construction thing (will go to artefacts)
-
   void createLocal (Term oldt, int isvariable, int isrole)
   {
     Term newt;
@@ -522,7 +542,7 @@ roleInstanceArachne (const System sys, const Protocol protocol,
 	    TERMLISTAPPEND (runs[rid].rho, newt);
 	    if (!role->initiator)
 	      {
-		// For non-initiators, we prepend the recving of the role names
+		// For non-initiators, we prepend the receiving of the role names
 
 		// XXX disabled for now TODO [x] [cc]
 		if (0 == 1 && not_recv_first (rd, oldt))
@@ -574,7 +594,6 @@ roleInstanceArachne (const System sys, const Protocol protocol,
    * and that termDuplicate is used internally
    */
   rd = roledefDuplicate (role->roledef);
-
   /* set parameters */
   /* generic setup of inherited stuff */
   runs[rid].protocol = protocol;
@@ -591,20 +610,16 @@ roleInstanceArachne (const System sys, const Protocol protocol,
   createLocals (protocol->rolenames, true, true);
   createLocals (role->declaredvars, true, false);
   createLocals (role->declaredconsts, false, false);
-
   /* Now we prefix the recv before rd, if extterm is not NULL.  Even if
    * extterm is NULL, rd is still set as the start and the index pointer of
    * the run.
    */
-  run_prefix_recv (sys, rid, rd, extterm);
-
+   run_prefix_recv (sys, rid, rd, extterm);
   /* TODO this is not what we want yet, also local knowledge. The local
    * knowledge (list?) also needs to be substituted on invocation. */
   runs[rid].know = NULL;
-
-  /* now adjust the local run copy */
+   /* now adjust the local run copy */
   run_localize (sys, rid, fromlist, tolist, substlist);
-
   termlistDelete (fromlist);
   runs[rid].locals = tolist;
 

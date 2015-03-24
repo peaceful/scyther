@@ -39,7 +39,7 @@ struct termlist
 
 //! Shorthand for termlist pointers.
 typedef struct termlist *Termlist;
-
+Termlist makeTermlist ();
 void termlistsInit (void);
 void termlistsDone (void);
 Termlist termlistDuplicate (Termlist tl);

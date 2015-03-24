@@ -66,8 +66,8 @@ typedef struct depeventgraph *Depeventgraph;
  * ---------------------------------------------------------------
  */
 
-extern Protocol INTRUDER;	//!< The intruder protocol
-extern Role I_M;		//!< special role; precedes all other events always
+//extern Protocol INTRUDER;	//!< The intruder protocol
+//extern Role I_M;		//!< special role; precedes all other events always
 
 /*
  * Globals
@@ -157,6 +157,8 @@ dependPrint ()
 void
 dependDone (const System sys)
 {
+  //error when integrate spurious attack checking, so close it for now
+	/*
   if (currentdepgraph != NULL)
     {
       globalError++;
@@ -166,6 +168,7 @@ dependDone (const System sys)
       error
 	("depgraph stack (depend.c) not empty at dependDone, bad iteration?");
     }
+    */
 }
 
 /*

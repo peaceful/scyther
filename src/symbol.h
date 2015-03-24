@@ -21,7 +21,7 @@
 #define SYMBOLS
 
 #include <stdarg.h>
-
+#include <stdio.h>
 //! Size of symbol hashtable.
 /** Optimistically large. Should be a prime, says theory.
  */

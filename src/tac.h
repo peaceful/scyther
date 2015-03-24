@@ -55,7 +55,15 @@ enum tactypes
   TAC_COMPROMISED,
   TAC_USERTYPE,
   TAC_MATCH,
-  TAC_MACRO
+  TAC_MACRO,
+  TAC_USER_SUBTYPE,
+  TAC_SUBTYPE,
+  TAC_ABSTRACT,
+  TAC_ENV,
+  TAC_TYPING,
+  TAC_EQUATIONS,
+  TAC_EQUATION,
+  TAC_PERSISTENT_EQUATION
 };
 
 //! Structure to hold the compilation tree nodes

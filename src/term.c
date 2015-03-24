@@ -79,7 +79,10 @@ termsDone (void)
 Term
 makeTerm ()
 {
-  return (Term) malloc (sizeof (struct term));
+  Term t = (Term) malloc (sizeof (struct term));
+  t->abst=0;
+  t->rolename=NULL;
+  return t;
 }
 
 //! Create a fresh encrypted term from two existing terms.
@@ -556,15 +559,15 @@ termDuplicateDeep (const Term term)
   if (!realTermLeaf (term))
     {
       if (realTermEncrypt (term))
-	{
-	  TermOp (newterm) = termDuplicateDeep (TermOp (term));
-	  TermKey (newterm) = termDuplicateDeep (TermKey (term));
-	}
+      {
+    	  TermOp (newterm) = termDuplicateDeep (TermOp (term));
+    	  TermKey (newterm) = termDuplicateDeep (TermKey (term));
+      }
       else
-	{
-	  TermOp1 (newterm) = termDuplicateDeep (TermOp1 (term));
-	  TermOp2 (newterm) = termDuplicateDeep (TermOp2 (term));
-	}
+      {
+    	  TermOp1 (newterm) = termDuplicateDeep (TermOp1 (term));
+    	  TermOp2 (newterm) = termDuplicateDeep (TermOp2 (term));
+      }
     }
   return newterm;
 }

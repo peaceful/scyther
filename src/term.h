@@ -24,8 +24,7 @@
 #include "bool.h"
 
 // type <= LEAF means it's a leaf, nkay?
-enum termtypes
-{ GLOBAL, VARIABLE, LEAF, ENCRYPT, TUPLE };
+enum termtypes { GLOBAL, VARIABLE, LEAF, ENCRYPT, TUPLE };
 
 //! The most basic datatype in the modelchecker.
 /**
@@ -43,6 +42,13 @@ struct term
   /**
    * \sa GLOBAL, VARIABLE, LEAF, ENCRYPT, TUPLE
    */
+  int abst; //only used for term pattern
+  int auth;
+  int accessible;
+  int sec;
+  int auth_req;
+  int sec_req;
+  //int essential;
   int type;
   //! Data Type termlist (e.g. agent or nonce)
   /** Only for leaves. */
@@ -58,8 +64,8 @@ struct term
    * If this is non-NULL, this leaf term is apparently substituted by
    * this term.
    */
-  struct term *subst;		// only for variable/leaf, substitution term
-
+  struct term *subst, *rolename;		// only for variable/leaf, substitution term
+  struct term *originType; //point to the term's type it is abstracted from
   union
   {
     //! Pointer to the symbol for leaves

@@ -60,11 +60,12 @@
 #include "xmlout.h"
 #include "heuristic.h"
 #include "tempfile.h"
-
+#include "attack_check.h"
+/*
 extern int *graph;
 extern int nodes;
 extern int graph_uordblks;
-
+*/
 static System sys;		//!< local buffer for the system pointer
 
 int attack_length;		//!< length of the attack
@@ -82,7 +83,8 @@ static int indentDepth;
 static int prevIndentDepth;
 static int indentDepthChanges;
 static FILE *attack_stream;
-
+extern System original;
+int attack_checking;
 /*
  * Forward declarations
  */
@@ -93,69 +95,83 @@ int iterate ();
  * Program code
  */
 
+void initGlobals()
+{
+	term_rolelocals_are_variables ();
+	indentDepth = 0;
+	prevIndentDepth = 0;
+	indentDepthChanges = 0;
+}
 //! Init Arachne engine
+void arachnePrepare()
+{
+	  Roledef rd;
+
+	  void add_event (int event, Term message)
+	  {
+	    rd = roledefAdd (rd, event, NULL, NULL, NULL, message, NULL);
+	  }
+
+	  Role add_role (const char *rolenamestring)
+	  {
+	    Role r;
+	    Term rolename;
+
+	    rolename = makeGlobalConstant (rolenamestring);
+	    r = roleCreate (rolename);
+	    r->roledef = rd;
+	    rd = NULL;
+	    r->next = INTRUDER->roles;
+	    INTRUDER->roles = r;
+	    // compute_role_variables (sys, INTRUDER, r);
+	    return r;
+	  }
+
+	  /**
+	   * Very important: turn role terms that are local to a run, into variables.
+	   */
+	  //term_rolelocals_are_variables ();
+
+	  /*
+	   * Add intruder protocol roles
+	   */
+
+	  INTRUDER = protocolCreate (makeGlobalConstant (" INTRUDER "));
+
+	  // Initially empty roledef
+	  rd = NULL;
+
+	  add_event (SEND, NULL);
+	  I_M = add_role ("I_M: Atomic message");
+
+	  add_event (RECV, NULL);
+	  add_event (RECV, NULL);
+	  add_event (SEND, NULL);
+	  I_RRS = add_role ("I_E: Encrypt");
+
+	  add_event (RECV, NULL);
+	  add_event (RECV, NULL);
+	  add_event (SEND, NULL);
+	  I_RRSD = add_role ("I_D: Decrypt");
+	  /*
+	  indentDepth = 0;
+	  prevIndentDepth = 0;
+	  indentDepthChanges = 0;
+	  */
+	  initGlobals();
+}
+
+void setArachne(const System mysys)
+{
+	sys = mysys;
+}
 void
 arachneInit (const System mysys)
 {
-  Roledef rd;
-
-  void add_event (int event, Term message)
-  {
-    rd = roledefAdd (rd, event, NULL, NULL, NULL, message, NULL);
-  }
-
-  Role add_role (const char *rolenamestring)
-  {
-    Role r;
-    Term rolename;
-
-    rolename = makeGlobalConstant (rolenamestring);
-    r = roleCreate (rolename);
-    r->roledef = rd;
-    rd = NULL;
-    r->next = INTRUDER->roles;
-    INTRUDER->roles = r;
-    // compute_role_variables (sys, INTRUDER, r);
-    return r;
-  }
-
-  sys = mysys;			// make sys available for this module as a global
-
-  /**
-   * Very important: turn role terms that are local to a run, into variables.
-   */
-  term_rolelocals_are_variables ();
-
-  /*
-   * Add intruder protocol roles
-   */
-
-  INTRUDER = protocolCreate (makeGlobalConstant (" INTRUDER "));
-
-  // Initially empty roledef
-  rd = NULL;
-
-  add_event (SEND, NULL);
-  I_M = add_role ("I_M: Atomic message");
-
-  add_event (RECV, NULL);
-  add_event (RECV, NULL);
-  add_event (SEND, NULL);
-  I_RRS = add_role ("I_E: Encrypt");
-
-  add_event (RECV, NULL);
-  add_event (RECV, NULL);
-  add_event (SEND, NULL);
-  I_RRSD = add_role ("I_D: Decrypt");
-
+  sys = mysys;
   sys->num_regular_runs = 0;
   sys->num_intruder_runs = 0;
   max_encryption_level = 0;
-
-  indentDepth = 0;
-  prevIndentDepth = 0;
-  indentDepthChanges = 0;
-
   return;
 }
 
@@ -343,6 +359,7 @@ semiRunCreate (const Protocol p, const Role r)
   roleInstance (sys, p, r, NULL, NULL);
   run = sys->maxruns - 1;
   sys->runs[run].height = 0;
+
   return run;
 }
 
@@ -413,11 +430,11 @@ add_recv_goals (const int run, const int old, const int new)
       int count;
       int i;
       Roledef rd;
-
       sys->runs[run].height = new;
       i = old;
       rd = eventRoledef (sys, run, i);
       count = 0;
+
       while (i < new && rd != NULL)
 	{
 	  if (rd->type == RECV)
@@ -618,7 +635,7 @@ iterate_role_events (int (*func) ())
       r = p->roles;
       while (r != NULL)
 	{
-	  Roledef rd;
+ 	  Roledef rd;
 	  int index;
 
 	  rd = r->roledef;
@@ -1734,148 +1751,53 @@ findUsedConstants (const System sys)
   return tlconst;
 }
 
-//! Retrieve a list of agent name candidates
-Termlist
-getAgentCandidates (Termlist seen)
-{
-  Termlist knowlist;
-  Termlist candidatelist;
-  Termlist li;			// list loop pointer
-
-  knowlist = knowledgeSet (sys->know);
-  candidatelist = NULL;
-  for (li = knowlist; li != NULL; li = li->next)
-    {
-      Term t;
-
-      t = li->term;
-      if (isAgentType (t->stype))
-	{
-	  /* agent */
-	  /* We don'typeterm want to instantiate untrusted agents. */
-	  if (!inTermlist (sys->untrusted, t))
-	    {
-	      /* trusted agent */
-	      if (!inTermlist (seen, t))
-		{
-		  /* This agent name is not in the list yet, so could be chosen */
-		  candidatelist = termlistPrepend (candidatelist, t);
-		}
-	    }
-	}
-    }
-  termlistDelete (knowlist);
-  return candidatelist;
-}
-
-//! Get to string of term
-const char *
-getTermString (Term t)
-{
-  if (t != NULL)
-    {
-      if (TermSymb (t) != NULL)
-	{
-	  return (TermSymb (t)->text);
-	}
-    }
-  return NULL;
-}
-
-//! Check the first character of two terms
-int
-isFirstCharEqual (Term t1, Term t2)
-{
-  const char *c1, *c2;
-
-  c1 = getTermString (t1);
-  c2 = getTermString (t2);
-  if ((c1 == NULL) || (c2 == NULL))
-    {
-      return false;
-    }
-  else
-    {
-      return (c1[0] == c2[0]);
-    }
-}
-
-//! Choose the best term from the (non-null) candidate list for the variable var
-Term
-chooseBestCandidate (Termlist candidatelist, Term var)
-{
-  Term last;
-  Termlist li;			// list loop pointer
-
-  // See if we have a candidate that starts with the same first character
-  for (li = candidatelist; li != NULL; li = li->next)
-    {
-      last = li->term;
-      if (isFirstCharEqual (last, var))
-	{
-	  return last;
-	}
-    }
-  // If not, we may still want to invoke heuristics (Alice initiates, Bob responds)
-  if (li == NULL)
-    {
-      // li==null happens if we did not break out of the loop, i.e., found nothing
-      const char *c;
-
-      c = getTermString (var);
-      if (c != NULL)
-	{
-	  // Check if name starts with common prefix, resort to common name if still a candidate
-	  if (strchr ("Ii", *c) && inTermlist (candidatelist, AGENT_Alice))
-	    {
-	      return AGENT_Alice;
-	    }
-	  if (strchr ("Rr", *c) && inTermlist (candidatelist, AGENT_Bob))
-	    {
-	      return AGENT_Bob;
-	    }
-	}
-    }
-  return last;
-}
-
 //! Create a new term with incremented run rumber, starting at sys->maxruns.
 /**
  * This is a rather intricate function that tries to generate new terms of a
  * certain type. It first looks up things in the initial knowledge, checking
  * whether they are used already. After that, new ones are generated.
  *
- * Input:
- * - seen is a termlist that contains newly generated terms (usage: seen = createNewTerm(seen,.. )
- * - typeterm is the type name term (e.g., "Agent" term, "Data" in case not clear.)
- * - isagent is a boolean that is true iff we are looking for an agent name from the initial knowledge for a role
- * - var is the variable term of which we use the name
- *
- * Output: the first element of the returned list, which is otherwise equal to seen.
+ * Output: the first element of the returned list.
  */
 Termlist
-createNewTerm (Termlist seen, Term typeterm, int isagent, Term nameterm)
+createNewTerm (Termlist tl, Term t, int isagent)
 {
   /* Does if have an explicit type?
    * If so, we try to find a fresh name from the intruder knowledge first.
    */
   if (isagent)
     {
-      Termlist candidatelist;
+      Termlist knowlist;
+      Termlist kl;
 
-      candidatelist = getAgentCandidates (seen);
-      if (candidatelist != NULL)
+      knowlist = knowledgeSet (sys->know);
+      kl = knowlist;
+      while (kl != NULL)
 	{
-	  Term t;
+	  Term k;
 
-	  t = chooseBestCandidate (candidatelist, nameterm);
-	  termlistDelete (candidatelist);
-	  return termlistPrepend (seen, t);
+	  k = kl->term;
+	  if (isAgentType (k->stype))
+	    {
+	      /* agent */
+	      /* We don't want to instantiate untrusted agents. */
+	      if (!inTermlist (sys->untrusted, k))
+		{
+		  /* trusted agent */
+		  if (!inTermlist (tl, k))
+		    {
+		      /* This agent name is not in the list yet. */
+		      return termlistPrepend (tl, k);
+		    }
+		}
+	    }
+	  kl = kl->next;
 	}
+      termlistDelete (knowlist);
     }
 
   /* Not an agent or no free one found */
-  return createNewTermGeneric (seen, typeterm);
+  return createNewTermGeneric (tl, t);
 }
 
 //! Delete a term made in the previous constructions
@@ -1897,7 +1819,7 @@ deleteNewTerm (Term t)
 //! Make a trace concrete
 /**
  * People find reading variables in attack outputs difficult.
- * Thus, we instantiate open variables in a sensible way to make things more readable.
+ * Thus, we instantiate them in a sensible way to make things more readable.
  *
  * This happens after sys->maxruns is fixed. Intruder constants thus are numbered from sys->maxruns onwards.
  *
@@ -1912,27 +1834,24 @@ makeTraceConcrete (const System sys)
 
   changedvars = NULL;
   tlnew = findUsedConstants (sys);
+  run = 0;
 
-  for (run = 0; run < sys->maxruns; run++)
+  while (run < sys->maxruns)
     {
       Termlist tl;
 
-      for (tl = termlistForward (sys->runs[run].locals); tl != NULL;
-	   tl = tl->prev)
+      tl = sys->runs[run].locals;
+      while (tl != NULL)
 	{
-	  Term basevar;
-
-	  basevar = tl->term;
-
 	  /* variable, and of some run? */
-	  if (isTermVariable (basevar) && TermRunid (basevar) >= 0)
+	  if (isTermVariable (tl->term) && TermRunid (tl->term) >= 0)
 	    {
 	      Term var;
 	      Term name;
 	      Termlist vartype;
 
-	      var = deVar (basevar);
-	      vartype = basevar->stype;
+	      var = deVar (tl->term);
+	      vartype = var->stype;
 	      // Determine class name
 	      if (vartype != NULL)
 		{
@@ -1945,15 +1864,15 @@ makeTraceConcrete (const System sys)
 		  name = TERM_Data;
 		}
 	      // We should turn this into an actual term
-	      tlnew =
-		createNewTerm (tlnew, name, isAgentType (var->stype),
-			       basevar);
+	      tlnew = createNewTerm (tlnew, name, isAgentType (var->stype));
 	      var->subst = tlnew->term;
 
 	      // Store for undo later
-	      TERMLISTADD (changedvars, var);
+	      changedvars = termlistAdd (changedvars, var);
 	    }
+	  tl = tl->next;
 	}
+      run++;
     }
   termlistDelete (tlnew);
   return changedvars;
@@ -2389,59 +2308,78 @@ iterate_buffer_attacks (void)
     }
 }
 
+void initClaimTest(Claimlist cl, int *newruns, int* newgoals)
+{
+	  Protocol p;
+	  Role r;
+	  p = (Protocol) cl->protocol;
+	  r = (Role) cl->role;
+	  if (switches.output == PROOF)
+	    {
+	      indentPrint ();
+	      eprintf ("Testing Claim ");
+	      termPrint (cl->type);
+	      eprintf (" from ");
+	      termPrint (p->nameterm);
+	      eprintf (", ");
+	      termPrint (r->nameterm);
+	      eprintf (" at index %i.\n", cl->ev);
+	    }
+	  indentDepth++;
+	  int run = semiRunCreate (p, r);
+	  (*newruns)++;
+ 	  proof_suppose_run (run, 0, cl->ev + 1);
+	  *newgoals = add_recv_goals (run, 0, cl->ev + 1);
+}
+
+
+void printRuns(const System sys)
+{
+	int i;
+	for(i = 0; i < sys->maxruns; i++)
+	{
+		eprintf("Run %d in role ",i);
+		printTerm(sys->runs[i].role->nameterm);
+		eprintf(" : ");
+		int j;
+		for(j=0; j< sys->runs[i].step; j++)
+		{
+			Roledef rd = eventRoledef(sys,i,j);
+			roledefPrint(rd);
+		}
+		eprintf("\n");
+	}
+}
+
 //! Arachne single claim test
 void
-arachneClaimTest (Claimlist cl)
+arachneClaimTest (Claimlist cl, void (*initFunc)(Claimlist, int*, int*))
 {
   // others we simply test...
   int run;
-  int newruns;
-  Protocol p;
-  Role r;
-
-  newruns = 0;
-  sys->current_claim = cl;
+  int newruns = 0;
+  int newgoals;
   attack_length = INT_MAX;
   attack_leastcost = INT_MAX;
   cl->complete = 1;
-  p = (Protocol) cl->protocol;
-  r = (Role) cl->role;
+  sys->current_claim = cl;
 
-  if (switches.output == PROOF)
-    {
-      indentPrint ();
-      eprintf ("Testing Claim ");
-      termPrint (cl->type);
-      eprintf (" from ");
-      termPrint (p->nameterm);
-      eprintf (", ");
-      termPrint (r->nameterm);
-      eprintf (" at index %i.\n", cl->ev);
-    }
-  indentDepth++;
-
-  run = semiRunCreate (p, r);
-  newruns++;
+  initFunc(cl, &newruns, &newgoals);
+  run = sys->maxruns-1;
   {
-    int newgoals;
-
-    int realStart (void)
+     int realStart (void)
     {
-#ifdef DEBUG
-      if (DEBUGL (5))
-	{
-	  printSemiState ();
-	}
-#endif
-      return iterate_buffer_attacks ();
+		#ifdef DEBUG
+    	if (DEBUGL (5))
+    	{
+    		printSemiState ();
+    	}
+		#endif
+    	return iterate_buffer_attacks ();
     }
-
-    proof_suppose_run (run, 0, cl->ev + 1);
-    newgoals = add_recv_goals (run, 0, cl->ev + 1);
-
-		    /**
-		     * Add initial knowledge node
-		     */
+	/**
+	 * Add initial knowledge node
+	*/
     {
       Termlist m0tl;
       Term m0t;
@@ -2449,40 +2387,32 @@ arachneClaimTest (Claimlist cl)
 
       m0tl = knowledgeSet (sys->know);
       if (m0tl != NULL)
-	{
-	  m0t = termlist_to_tuple (m0tl);
-	  // eprintf("Initial intruder knowledge node for ");
-	  // termPrint(m0t);
-	  // eprintf("\n");
-	  I_M->roledef->message = m0t;
-	  m0run = semiRunCreate (INTRUDER, I_M);
-	  newruns++;
-	  proof_suppose_run (m0run, 0, 1);
-	  sys->runs[m0run].height = 1;
-	}
-      else
-	{
-	  m0run = -1;
-	}
-
       {
+    	  m0t = termlist_to_tuple (m0tl);
+    	  I_M->roledef->message = m0t;
+    	  m0run = semiRunCreate (INTRUDER, I_M);
+     	  newruns++;
+    	  proof_suppose_run (m0run, 0, 1);
+    	  sys->runs[m0run].height = 1;
+      }
+      else
+      {
+    	  m0run = -1;
+      }
 		      /**
 		       * Add specific goal info and iterate algorithm
 		       */
-	add_claim_specifics (sys, cl,
+  	add_claim_specifics (sys, cl,
 			     roledef_shift (sys->runs[run].start, cl->ev),
 			     realStart);
-      }
-
-
       if (m0run != -1)
-	{
+      {
 	  // remove initial knowledge node
-	  termDelete (m0t);
-	  termlistDelete (m0tl);
-	  semiRunDestroy ();
-	  newruns--;
-	}
+    	  termDelete (m0t);
+    	  termlistDelete (m0tl);
+    	  semiRunDestroy ();
+    	  newruns--;
+      }
     }
     // remove claiming run goals 
     goal_remove_last (newgoals);
@@ -2520,27 +2450,172 @@ arachneClaimTest (Claimlist cl)
     }
 }
 
+void resetOriginalModel()
+{
+	bindingDone();
+    termlistDelete(original->proofstate);	// list of proof state terms
+}
+
+void setModel(const System sys)
+{
+	setBinding(sys);
+	setArachne(sys);
+}
+
+void preComputation()
+{
+	  int print_send (Protocol p, Role r, Roledef rd, int index)
+	  {
+	    eprintf ("IRS: ");
+	    termPrint (p->nameterm);
+	    eprintf (", ");
+	    termPrint (r->nameterm);
+	    eprintf (", %i, ", index);
+	    roledefPrint (rd);
+	    eprintf ("\n");
+	    return 1;
+	  }
+
+	  int determine_encrypt_max (Protocol p, Role r, Roledef rd, int index)
+	  {
+	    int tlevel;
+
+	    tlevel = term_encryption_level (rd->message);
+	#ifdef DEBUG
+	    if (DEBUGL (3))
+	      {
+		eprintf ("Encryption level %i found for term ", tlevel);
+		termPrint (rd->message);
+		eprintf ("\n");
+	      }
+	#endif
+	    if (tlevel > max_encryption_level)
+	      max_encryption_level = tlevel;
+	    return 1;
+	  }
+	  max_encryption_level = 0;
+
+	  /*
+	   * set up claim role(s)
+	   */
+
+	  iterate_role_events (determine_encrypt_max);
+	#ifdef DEBUG
+	  if (DEBUGL (1))
+	    {
+	      eprintf ("Maximum encryption level: %i\n", max_encryption_level);
+	    }
+	#endif
+
+	  fixAgentKeylevels ();
+	  indentDepth = 0;
+	  proofDepth = 0;
+}
+
+int spuriousAttackCheck(Claimlist cl)
+{
+	//store the abstract model
+	System abst_sys = sys;
+
+	//remember global variables
+	int old_attack_length = attack_length;
+	int old_attack_leastcost = attack_leastcost;
+	int old_proofDepth = proofDepth;
+	int old_max_encryption_level = max_encryption_level;
+	int old_indentDepth = indentDepth;
+	int old_prevIndentDepth = prevIndentDepth;
+	int old_indentDepthChanges = indentDepthChanges;
+	int old_rolelocal_variable = rolelocal_variable;
+	//set the system to the original model
+	initGlobals();
+	initModelCheck(original);
+	preComputation();
+	//test whether the attack is real in the original model
+	arachneClaimTest(cl,mapRuns);
+
+	//free original runs
+	while (sys->maxruns > 0)
+	{
+	     semiRunDestroy ();
+	}
+	resetOriginalModel();
+
+	//restore global variables
+	attack_length = old_attack_length;
+	attack_leastcost = old_attack_leastcost;
+	proofDepth = old_proofDepth;
+	max_encryption_level = old_max_encryption_level;
+	indentDepth = old_indentDepth;
+	prevIndentDepth = old_prevIndentDepth;
+	indentDepthChanges = old_indentDepthChanges;
+	rolelocal_variable = old_rolelocal_variable;
+	setModel(abst_sys);
+	return cl->failed;
+}
+
+extern List outputClaims, falsifiedClaims, verified, falsified;
+extern Termlist claims;
+extern int abstcount;
+
 //! Arachne single claim inspection
 int
 arachneClaim ()
 {
   Claimlist cl;
-
+  attack_checking=0;
   // Skip the dummy claims or SID markers
   cl = sys->current_claim;
   if (!isClaimSignal (cl))
     {
       // Some claims are always true!
-      if (!cl->alwaystrue)
-	{
+      if (!cl->alwaystrue&&inTermlist(claims,cl->label))
+      {
 	  // others we simply test...
-	  arachneClaimTest (cl);
-	}
+		  arachneClaimTest (cl, initClaimTest);
+		  //additional code for abstraction module
+		  //if the current model is the original one or the claim is true then the property is verified
+		  if(!abstcount||!cl->failed)
+		  {
+			  list_add_tail(&verified, &outputClaims,cl);
+		  }
+		  else
+		  {
+			  Claimlist orgcl = cl;
+			  //if the current model is an abstract one then there must be an attack in this model
+			  if(abstcount)
+			  {
+				  //we then find the corresponding claim in the original model
+					Claimlist clist = original->claimlist;
+					while(clist!=NULL)
+					{
+						if(isTermEqual(clist->label,cl->label))
+						{
+							orgcl = clist;
+							break;
+						}
+						clist = clist->next;
+					}
+			  }
+			  attack_checking=1; //set the attack_checking state to true
+			  //we check if the attack is not spurious or not
+			  if(spuriousAttackCheck(orgcl))
+			  {
+				  //if the attack is not spurious then the property does not satisfy
+				  list_add_tail(&falsified, &falsifiedClaims,orgcl);
+				  eprintf("Property falsified at abstraction %d:\n", abstcount);
+				  claimStatusReport (original, orgcl);
+			  }
+			  attack_checking=0;
+		  }
+      }
+      //we close this as the result can only output if the properties are verified (or no spurious attacks)
+      /*
       claimStatusReport (sys, cl);
       if (switches.xml)
-	{
-	  xmlOutClaim (sys, cl);
-	}
+	  {
+	  	  xmlOutClaim (sys, cl);
+	  }
+	  */
       return true;
     }
   return false;
@@ -2555,89 +2630,40 @@ arachneClaim ()
  *
  * @TODO what does it return? And is that -1 valid, if nothing is tested?
  */
+
 int
 arachne ()
 {
-  Claimlist cl;
-  int count;
+	if (switches.runs == 0)
+	{
+	      // No real checking.
+	     return -1;
+	}
+	  if (sys->maxruns > 0)
+	    {
+	      error ("Something is wrong, number of runs >0.");
+	    }
 
-  int print_send (Protocol p, Role r, Roledef rd, int index)
-  {
-    eprintf ("IRS: ");
-    termPrint (p->nameterm);
-    eprintf (", ");
-    termPrint (r->nameterm);
-    eprintf (", %i, ", index);
-    roledefPrint (rd);
-    eprintf ("\n");
-    return 1;
-  }
-
-  int determine_encrypt_max (Protocol p, Role r, Roledef rd, int index)
-  {
-    int tlevel;
-
-    tlevel = term_encryption_level (rd->message);
-#ifdef DEBUG
-    if (DEBUGL (3))
-      {
-	eprintf ("Encryption level %i found for term ", tlevel);
-	termPrint (rd->message);
-	eprintf ("\n");
-      }
-#endif
-    if (tlevel > max_encryption_level)
-      max_encryption_level = tlevel;
-    return 1;
-  }
-
-  /*
-   * set up claim role(s)
-   */
-
-  if (switches.runs == 0)
-    {
-      // No real checking.
-      return -1;
-    }
-
-  if (sys->maxruns > 0)
-    {
-      error ("Something is wrong, number of runs >0.");
-    }
-
-  sys->num_regular_runs = 0;
-  sys->num_intruder_runs = 0;
-
-  max_encryption_level = 0;
-  iterate_role_events (determine_encrypt_max);
-#ifdef DEBUG
-  if (DEBUGL (1))
-    {
-      eprintf ("Maximum encryption level: %i\n", max_encryption_level);
-    }
-#endif
-
-  fixAgentKeylevels ();
-
-  indentDepth = 0;
-  proofDepth = 0;
-  cl = sys->claimlist;
-  count = 0;
-  while (cl != NULL)
+	sys->num_regular_runs = 0;
+	sys->num_intruder_runs = 0;
+	preComputation();
+	Claimlist cl;
+	int count;
+	cl = sys->claimlist;
+	count = 0;
+	while (cl != NULL)
     {
       /**
        * Check each claim
        */
       sys->current_claim = cl;
       if (isClaimRelevant (cl))	// check for any filtered claims (switch)
-	{
-	  if (arachneClaim ())
-	    {
-	      count++;
-	    }
-	}
-
+      {
+    	  if (arachneClaim ())
+    	  {
+    		  count++;
+    	  }
+      }
       // next
       cl = cl->next;
     }

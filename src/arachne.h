@@ -36,5 +36,5 @@ void printSemiState ();
 int countIntruderActions ();
 void role_name_print (const int run);
 void markNoFullProof (const Term tbig, const Term tsmall);
-
+int add_recv_goals (const int , const int , const int );
 #endif

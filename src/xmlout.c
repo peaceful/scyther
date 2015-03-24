@@ -676,30 +676,6 @@ xmlRoleEventlist (const System sys, Roledef rd, int index)
   xmlPrint ("</eventlist>");
 }
 
-//! Output a protocol description
-void
-xmlProtocol (const System sys, Protocol p)
-{
-  Role r;
-
-  xmlPrint ("<protocol>");
-  xmlindent++;
-  xmlOutTerm ("name", p->nameterm);
-  r = p->roles;
-  while (r != NULL)
-    {
-      xmlPrint ("<role>");
-      xmlindent++;
-      xmlRoleTermPrint (r->nameterm);
-      xmlRoleEventlist (sys, r->roledef, 0);
-      xmlindent--;
-      xmlPrint ("</role>");
-      r = r->next;
-    }
-  xmlindent--;
-  xmlPrint ("</protocol>");
-}
-
 //! Show all protocol roles that are in the attack.
 void
 xmlInvolvedProtocolRoles (const System sys)
@@ -711,7 +687,24 @@ xmlInvolvedProtocolRoles (const System sys)
     {
       if (isProtocolInvolved (sys, p))
 	{
-	  xmlProtocol (sys, p);
+	  Role r;
+
+	  xmlPrint ("<protocol>");
+	  xmlindent++;
+	  xmlOutTerm ("name", p->nameterm);
+	  r = p->roles;
+	  while (r != NULL)
+	    {
+	      xmlPrint ("<role>");
+	      xmlindent++;
+	      xmlRoleTermPrint (r->nameterm);
+	      xmlRoleEventlist (sys, r->roledef, 0);
+	      xmlindent--;
+	      xmlPrint ("</role>");
+	      r = r->next;
+	    }
+	  xmlindent--;
+	  xmlPrint ("</protocol>");
 	}
       p = p->next;
     }

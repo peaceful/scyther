@@ -1,0 +1,16 @@
+1. in Main.c
+- re-organizing initialization code: include initialisations in MC_single(const System sys). This is because these initializations are also required for different abstract models.
+- Close the knowledgeDestroy( deallocation code in MC_single. The reason is that there is a complicated sharing knowledge between  
+
+2. in arachne.c:
+- split arachneInit into three procedures: arachnePrepare(), setGlobals(), and arachneInit(System sys). 
+ + arachnePrepare(): set up the intruder run
+ + setGlobals(): initialize global variables
+ + arecheneInit(System sys): set the current sys variable
+
+- integrate some code for abstraction in arachneClaim()
+- parameterize arachneClaimTest() with a function pointer that allows factoring out the part of arachneClaimTest() which is responsible for establishing initial goals. The purpose of this parameterization is that the initialisations of goals for verifying models and for checking spurious attacks are different.
+- seperate some code that is protocol-relevant computation from arachne(), as this code is also needed for checking attack in the original model.
+
+3. in claim.c
+- adding some code for re-constructing attack traces to the function property_check(const System). 
