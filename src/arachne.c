@@ -85,6 +85,8 @@ static int indentDepthChanges;
 static FILE *attack_stream;
 extern System original;
 int attack_checking;
+int tracelength;
+int regular_runs;
 /*
  * Forward declarations
  */
@@ -2518,7 +2520,8 @@ int spuriousAttackCheck(Claimlist cl)
 	System abst_sys = sys;
 
 	//remember global variables
-	int old_attack_length = attack_length;
+	int old_maxtracelength = switches.maxtracelength;
+	int old_regular_runs = switches.runs;
 	int old_attack_leastcost = attack_leastcost;
 	int old_proofDepth = proofDepth;
 	int old_max_encryption_level = max_encryption_level;
@@ -2526,6 +2529,7 @@ int spuriousAttackCheck(Claimlist cl)
 	int old_prevIndentDepth = prevIndentDepth;
 	int old_indentDepthChanges = indentDepthChanges;
 	int old_rolelocal_variable = rolelocal_variable;
+
 	//set the system to the original model
 	initGlobals();
 	initModelCheck(original);
@@ -2540,8 +2544,11 @@ int spuriousAttackCheck(Claimlist cl)
 	}
 	resetOriginalModel();
 
+	//reset the switches
+	switches.maxtracelength = old_maxtracelength;
+	switches.runs = old_regular_runs;
+
 	//restore global variables
-	attack_length = old_attack_length;
 	attack_leastcost = old_attack_leastcost;
 	proofDepth = old_proofDepth;
 	max_encryption_level = old_max_encryption_level;

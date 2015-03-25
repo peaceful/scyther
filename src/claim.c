@@ -1179,7 +1179,7 @@ property_check (const System sys)
       //store attack in some structure for re-construct attack in the original model
       if(!attack_checking)
       {
-    	  tracelength = get_semitrace_length();
+    	  //tracelength = get_semitrace_length();
     	  copyRuns(sys);
     	  /*
           if(attack_checking)

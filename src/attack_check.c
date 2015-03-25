@@ -8,10 +8,11 @@
 #include "attack_check.h"
 extern System original;
 extern Protocol INTRUDER;
-Runinfo runs;
-int maxruns;
 int tracelength;
 int regular_runs;
+
+Runinfo runs;
+int maxruns;
 
 void initModelCheck(System sys)
 {
@@ -29,7 +30,8 @@ struct runinfo copyRun(struct run r)
 	result.protocol = r.protocol;
 	result.protocol = r.protocol;
 	result.role = r.role;
-	result.step = r.step;
+	Roledef rd =roledef_shift(r.start,r.step-1);
+	result.lastevent = rd->label;
 	return result;
 }
 
@@ -53,8 +55,7 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 {
 	Protocol p;
 	Role r;
-	original->maxtracelength = tracelength;
-	original->num_regular_runs=regular_runs;
+	tracelength = 0;
 	original->num_intruder_runs = 0;
 	original->attackid=0;
 	int i;
@@ -71,14 +72,24 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 							roleInstance(original, p, r, NULL, NULL);
 							(*newruns)++;
 							original->runs[i].height = 0;
+							//identify how many steps that should be executed in the original model
+							Roledef rd;
+							int step = 1;
+							for(rd = r->roledef; rd!=NULL && !isTermEqual(rd->label,runs[i].lastevent); rd= rd->next)
+							{
+								step++;
+							}
 							if(i==0)
-							*newgoals=add_recv_goals(i, 0, runs[i].step);
-							else original->runs[i].step = runs[i].step;
+								*newgoals=add_recv_goals(i, 0, step-1);
+							else original->runs[i].step = step;
+							tracelength+=step;
 							break;
 						}
 					break;
 				}
 	}
+	switches.maxtracelength = tracelength;
+	switches.runs = regular_runs;
 }
 
 
