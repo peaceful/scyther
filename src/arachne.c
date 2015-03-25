@@ -2519,9 +2519,11 @@ int spuriousAttackCheck(Claimlist cl)
 	//store the abstract model
 	System abst_sys = sys;
 
-	//remember global variables
+	//store the current switches
 	int old_maxtracelength = switches.maxtracelength;
 	int old_regular_runs = switches.runs;
+
+	//remember global variables
 	int old_attack_leastcost = attack_leastcost;
 	int old_proofDepth = proofDepth;
 	int old_max_encryption_level = max_encryption_level;

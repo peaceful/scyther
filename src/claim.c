@@ -1149,6 +1149,7 @@ count_false_claim (const System sys)
 }
 
 //! Check properties
+extern int regular_runs;
 int
 property_check (const System sys)
 {
@@ -1179,20 +1180,8 @@ property_check (const System sys)
       //store attack in some structure for re-construct attack in the original model
       if(!attack_checking)
       {
-    	  //tracelength = get_semitrace_length();
     	  copyRuns(sys);
-    	  /*
-          if(attack_checking)
-          {
-        	  eprintf("Original attack:\n");
-          }
-          else
-          {
-        	  eprintf("Abstract attack:\n");
-          }
-    	  printRuns(sys);
-    	  eprintf("\n");
-    	  */
+    	  regular_runs = sys->num_regular_runs;
       }
      }
   return flag;

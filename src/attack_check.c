@@ -8,7 +8,6 @@
 #include "attack_check.h"
 extern System original;
 extern Protocol INTRUDER;
-int tracelength;
 int regular_runs;
 
 Runinfo runs;
@@ -48,14 +47,13 @@ void copyRuns(System sys)
 			 maxruns++;
 		 }
 	 }
-	 regular_runs = sys->num_regular_runs;
 }
 
 void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 {
 	Protocol p;
 	Role r;
-	tracelength = 0;
+	int tracelength = 0;
 	original->num_intruder_runs = 0;
 	original->attackid=0;
 	int i;
@@ -88,6 +86,7 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 					break;
 				}
 	}
+	//change the switches
 	switches.maxtracelength = tracelength;
 	switches.runs = regular_runs;
 }
