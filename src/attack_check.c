@@ -31,6 +31,7 @@ struct runinfo copyRun(struct run r)
 	result.role = r.role;
 	Roledef rd =roledef_shift(r.start,r.step-1);
 	result.lastevent = rd->label;
+	result.eventtype = rd->type;
 	return result;
 }
 
@@ -73,12 +74,12 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 							//identify how many steps that should be executed in the original model
 							Roledef rd;
 							int step = 1;
-							for(rd = r->roledef; rd!=NULL && !isTermEqual(rd->label,runs[i].lastevent); rd= rd->next)
+							for(rd = r->roledef; rd!=NULL && (rd->type!=runs[i].eventtype||!isTermEqual(rd->label,runs[i].lastevent)); rd= rd->next)
 							{
 								step++;
 							}
 							if(i==0)
-								*newgoals=add_recv_goals(i, 0, step-1);
+								*newgoals=add_recv_goals(i, 0, step);
 							else original->runs[i].step = step;
 							tracelength+=step;
 							break;

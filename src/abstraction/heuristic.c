@@ -1121,6 +1121,7 @@ void pull_out_agent(Termlist *keep, Termlist *pull)
 		tl=tl->next;
 	}
 }
+/*
 int containOnlyAgentInPatList(Termlist tl)
 {
 	Termlist tmp;
@@ -1128,7 +1129,7 @@ int containOnlyAgentInPatList(Termlist tl)
 		if(!containOnlyAgent(tmp->term->subst)) return 0;
 	return 1;
 }
-
+*/
 //check if the session-key is weaker than the protection provided by term t
 int sessionKeyWeaker(Term t, Term key)
 {
@@ -1172,6 +1173,8 @@ int buildPatternForEnc(Term type,Termlist *pull, Termlist *keep,
 	Termlist tmp = *keep;
 	int auth_outer =getAuthFromCrypto(outercrypto);
 	int sec_outer = getSecFromCrypto(outercrypto);
+	int auth_inner = getAuthFromCrypto(innercrypto);
+	int sec_inner = getSecFromCrypto(innercrypto);
 	//int containAuthTerm = authenticTermInPlaintext(auth,tmp);
 	while(tmp!=NULL)
 	{
@@ -1188,9 +1191,13 @@ int buildPatternForEnc(Term type,Termlist *pull, Termlist *keep,
 		//term may contain sensitive agent identities
 		int agent_sensitive = (innercrypto.type!=SYM&&containDiffAgent(t,TermOp(innercrypto.info)))||
 							  (innercrypto.type==SYM&&containDiffAgent(t,NULL));
+		int better_crypto = isMoreSecure(auth_inner,sec_inner,auth_outer,sec_outer);
+		int ensure_req =		isMoreSecure(auth_req,sec_req,auth_outer,sec_outer);
 		//pull out if
 		if(!leak_secret&&!create_unif&&
-		   (!good_key||(!agent_sensitive&&isMoreSecure(auth_req,sec_req,auth_outer,sec_outer))))
+		   (!good_key||
+		    (agent_sensitive && better_crypto)||
+		    (!agent_sensitive && (better_crypto||ensure_req))))
 		{
 			*pull = termlistAdd(*pull,tmp->term);
 			//remove from keep list
@@ -1212,12 +1219,14 @@ int buildPatternForEnc(Term type,Termlist *pull, Termlist *keep,
 		tmp = tmp->next;
 	}
 	UnexpectedFuncSymbForEnc(keep,pull);
+	/* agent names encrypted with long-term shared keys may still be essential ==> must be kept
 	if(containOnlyAgentInPatList(*keep))
 	{
 		eqtype=SYSTEM_PULL_OUT;
 		*pull = termlistConcat(*pull,*keep);
 		*keep=NULL;
 	}
+	*/
 	return *pull!=NULL?SYSTEM_PULL_OUT:SYSTEM_TRIVIAL;
 }
 

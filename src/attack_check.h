@@ -22,6 +22,7 @@ struct runinfo
 	  Protocol protocol;		//!< Protocol of this run.
 	  Role role;			//!< Role of this run.
 	  Term lastevent;			//!< Current execution point in the run (the label of the last event)
+	  int eventtype; //type of the last event
 } runinfo;
 typedef struct runinfo *Runinfo;
 void copyRuns(System);
