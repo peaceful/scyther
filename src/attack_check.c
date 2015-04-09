@@ -23,6 +23,7 @@ void initModelCheck(System sys)
 	  systemRuns (sys);		// init runs data
 }
 
+//copy a run (from abstract attack)
 struct runinfo copyRun(struct run r)
 {
 	struct runinfo result;
@@ -35,6 +36,7 @@ struct runinfo copyRun(struct run r)
 	return result;
 }
 
+//copy runs from an abstract attack
 void copyRuns(System sys)
 {
 	 maxruns = 0;
@@ -50,6 +52,7 @@ void copyRuns(System sys)
 	 }
 }
 
+//map abstract attack runs to the corresponding symbolic runs in the original model
 void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 {
 	Protocol p;
@@ -78,9 +81,12 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 							{
 								step++;
 							}
+							/*
 							if(i==0)
 								*newgoals=add_recv_goals(i, 0, step);
-							else original->runs[i].step = step;
+							else
+							*/
+							original->runs[i].step = step;
 							tracelength+=step;
 							break;
 						}
