@@ -17,8 +17,10 @@ void avremInit(System mysys){
 //check if term u occurs in clear text in t
 int isClearTextinTerm( Term t,Term u){
 	if(realTermLeaf(t)) return 1;
-	if(realTermEncrypt(t)){
-		if(t->helper.fcall) return !isSubterm(u,TermOp(t));
+	if(realTermEncrypt(t))
+	{
+		if(t->helper.fcall==true)
+		return !isSubterm(u,TermOp(t));
 		return !isSubterm(u,TermOp(t))&&!isSubterm(u,TermKey(t));
 	}
 	return isClearTextinTerm(TermOp1(t),u)&&isClearTextinTerm(TermOp2(t),u);
@@ -33,11 +35,13 @@ void extractClearAVFromRole(Role r)
 		Roledef rd;
 		int isclear=1;
 		for(rd = r->roledef;rd!=NULL;rd=rd->next)
+		{
 			if(rd->type!=CLAIM&&!isClearTextinTerm(rd->message,tl->term))
 			{
 				isclear=0;
 				break;
 			}
+		}
 		if(isclear)
 		{
 			tl->term->rolename=r->nameterm;

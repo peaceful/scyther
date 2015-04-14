@@ -132,3 +132,18 @@ Term createPatFromType(Term type)
 			               createNewVariableWithType(TermKey(type)));
 }
 
+
+Term createTermFromPatList(Termlist tl)
+{
+	if(tl==NULL) return NULL;
+	Term t ;
+	if(tl->next==NULL)
+	{
+		t= termDuplicate(tl->term->subst);
+	}
+	else
+	{
+		t = makeTermTuple(termDuplicate(tl->term->subst), createTermFromPatList(tl->next));
+	}
+	return t;
+}

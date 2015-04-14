@@ -46,7 +46,6 @@ char *RUNSEP;
 /* external definitions */
 
 extern int inTermlist ();	// suppresses a warning, but at what cost?
-
 /* forward declarations */
 
 void indent (void);
@@ -81,6 +80,7 @@ makeTerm ()
 {
   Term t = (Term) malloc (sizeof (struct term));
   t->abst=0;
+  t->e_sec=t->e_auth=t->e_contain=UNKNOWN;
   t->rolename=NULL;
   return t;
 }

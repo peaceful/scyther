@@ -13,6 +13,7 @@
 
 Equation createTicketHomomorphicPatForHash(Term hashfunc);
 Term createPatFromType(Term);
+Term createTermFromPatList(Termlist);
 Equation createHomoEquationFromType(Term);
 Term makeHomomorphic(Term t);
 Term makeHomomorphicTuple(Term t);

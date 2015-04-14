@@ -16,7 +16,7 @@ List outputClaims;
 List falsifiedClaims;
 List verified, falsified;
 Termlist secret;
-Termlist secretav;
+//Termlist secretav;
 Termlist claims;
 int abstcount;
 
@@ -35,14 +35,6 @@ void initClaims()
 		claims = termlistAppend(claims,cl->label);
 	}
 }
-void abssysInit(){
-	outputClaims=falsifiedClaims=NULL;
-	absList = NULL;
-	secret= NULL;
-	pat = symbolSysConst("Pat_");
-	initKnowledge();
-	initClaims();
-}
 
 void addProt2Stack (const void *data)
 {
@@ -60,11 +52,63 @@ void addProt2Stack (const void *data)
   }
   absList = newnode;
 }
+
+void addSecretTerms()
+{
+	Claimlist cl= original->claimlist;
+	while(cl!=NULL)
+	{
+		if(isSecretClaim(cl))
+		{
+			secret = termlistAdd(secret,cl->parameter);
+		}
+		cl = cl->next;
+	}
+}
+
+void extractSecrets()
+{
+	addSecretTerms();
+	Role r;
+	Roledef rd;
+	Protocol main_prot = original->protocols;
+	while(main_prot!=NULL&&isHelperProtocol(main_prot))
+		main_prot=main_prot->next;
+	for(r = main_prot->roles; r!=NULL;r=r->next)
+	{
+		for(rd = r->roledef;rd!=NULL;rd=rd->next)
+			if(rd->type==CLAIM&&isSecretClaim(rd->claiminfo))
+				secrecyAnalysis(main_prot->roles,r,rd->message);
+	}
+	//extract atoms and variables from secrets
+	/*
+	Termlist tl = NULL;
+	Termlist tmp;
+	for(tmp = secret; tmp!=NULL; tmp= tmp->next)
+		tl = extractAV(tl,tmp->term,0);
+	//termlistDelete(secret);
+	secret = tl;
+	*/
+	//secretav=tl;
+}
+
+
+void abssysInit(){
+	outputClaims=falsifiedClaims=NULL;
+	absList = NULL;
+	secret= NULL;
+	pat = symbolSysConst("Pat_");
+	initKnowledge();
+	initClaims();
+	extractSecrets();
+	addProt2Stack(original);
+}
+
 void buildAbstractionList()
 {
-	System abssys = original;
+	System abssys = systemDuplicate(original);
 	abstcount=0;
-	do
+	while(abstcount<MAX_ABS)
 	{
 		abssys = abstractSystem(abssys);
 		if(abstractionSucceed())
@@ -77,7 +121,6 @@ void buildAbstractionList()
 		}
 		else break;
 	}
-	while(abstcount<MAX_ABS);
 	eprintf("Number of abstractions:%d\n",abstcount);
 }
 
@@ -130,20 +173,6 @@ void freeSystem(System sys)
   protocolDelete(sys->protocols);
   systemDone (sys);
 }
-
-void addSecretTerms()
-{
-	Claimlist cl= original->claimlist;
-	while(cl!=NULL)
-	{
-		if(isSecretClaim(cl))
-		{
-			secret = termlistAdd(secret,cl->parameter);
-		}
-		cl = cl->next;
-	}
-}
-
 
 Roledef findEventContainTerm(Roledef rd, Term t)
 {
@@ -256,29 +285,6 @@ void secrecyAnalysis(Role roles, Role r, Term sec)
 	termlistDelete(av);
 }
 
-void declareSecrets()
-{
-	addSecretTerms();
-	Role r;
-	Roledef rd;
-	Protocol main_prot = original->protocols;
-	while(main_prot!=NULL&&isHelperProtocol(main_prot))
-		main_prot=main_prot->next;
-	for(r = main_prot->roles; r!=NULL;r=r->next)
-	{
-		for(rd = r->roledef;rd!=NULL;rd=rd->next)
-			if(rd->type==CLAIM&&isSecretClaim(rd->claiminfo))
-				secrecyAnalysis(main_prot->roles,r,rd->message);
-	}
-	//extract atoms and variables from secrets
-	Termlist tl = NULL;
-	Termlist tmp;
-	for(tmp = secret; tmp!=NULL; tmp= tmp->next)
-		tl = extractAV(tl,tmp->term,0);
-	//termlistDelete(secret);
-	secret = tl;
-	secretav=tl;
-}
 
 void list_delete_system(List l)
 {
@@ -327,12 +333,10 @@ void removeVerifiedClaims()
 void runVerification(void (*MC_single)(const System))
 {
 	abssysInit();
-	declareSecrets();
-	addProt2Stack(original);
 	  struct timeval start, finish;
 	  long msec;
 	  gettimeofday(&start, NULL);
-	buildAbstractionList();
+	  buildAbstractionList();
 	  gettimeofday(&finish, NULL);
 	  msec = timevaldiff(&start, &finish);
 	eprintf("Constructing abstractions in milliseconds: %d\n",msec);
@@ -370,7 +374,7 @@ void runVerification(void (*MC_single)(const System))
  	list_delete_system(absList);
 	deleteEqlist(eql);
 	termlistDelete(secret);
-	termlistDelete(secretav);
+	//termlistDelete(secretav);
 }
 
 /*
@@ -380,7 +384,7 @@ void runVerification(void (*MC_single)(const System))
 /*
 void runVerification(int (*MC_single)(System))
 {
-	declareSecrets();
+	extractSecrets();
 	addProt2Stack(sys);
 	  struct timeval start, finish;
 	  long msec;

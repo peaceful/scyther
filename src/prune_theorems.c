@@ -62,6 +62,9 @@ correctLocalOrder (const System sys)
 
 	  // t is a term from r2 that occurs in r1
 	  r2 = TermRunid (t);
+	  //eprintf("check run:");
+	  //printRuns(sys);
+	  //eprintf("\n");
 	  e1 = firstOccurrence (sys, r1, t, ANYEVENT);
 	  if (e1 >= 0)
 	    {

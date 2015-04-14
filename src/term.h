@@ -25,11 +25,22 @@
 
 // type <= LEAF means it's a leaf, nkay?
 enum termtypes { GLOBAL, VARIABLE, LEAF, ENCRYPT, TUPLE };
+enum isknown
+{
+	UNKNOWN, YES, NO
+};
 
 //! The most basic datatype in the modelchecker.
 /**
  * Describes a single term.
  */
+struct slabel
+{
+	int prot_auth, prop_auth;
+	int prot_sec, prop_sec;
+	int gb_auth, gb_sec;
+	int tmp_auth, tmp_sec;
+};
 
 struct term
 {
@@ -43,13 +54,12 @@ struct term
    * \sa GLOBAL, VARIABLE, LEAF, ENCRYPT, TUPLE
    */
   int abst; //only used for term pattern
-  int auth;
   int accessible;
-  int sec;
-  int auth_req;
-  int sec_req;
-  //int essential;
   int type;
+  int e_auth, e_sec;
+  int e_contain; //contains an essential term?
+  int inIK; //is deducible from IK?
+  struct slabel seclabel;
   //! Data Type termlist (e.g. agent or nonce)
   /** Only for leaves. */
   void *stype;			// list of types

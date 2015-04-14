@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include "../term.h"
 #include "../termlist.h"
 #include "../system.h"
 #include "subtype.h"
@@ -27,6 +28,12 @@ struct cryptstr
 {
  int type;
  Term info;// it is the key (for MAC, encryptions) and NULL otherwise
+};
+
+struct cryptolabel
+{
+	int auth_crypt;
+	int sec_crypt;
 };
 void heuristicInit(System mysys);
 System abstractSystem();

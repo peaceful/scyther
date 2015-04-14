@@ -56,6 +56,10 @@ int isTicketVariable(Term t)
 	return realTermVariable(t)&&isTermEqual(getTermType(t),TERM_Ticket);
 }
 
+int termEqual(Term t, Term u)
+{
+	return t->type == u->type&&isTermEqual (t, u);
+}
 int termInList (Termlist tl, const Term term)
 {
   if (term == NULL)
@@ -64,13 +68,30 @@ int termInList (Termlist tl, const Term term)
     }
   while (tl != NULL)
     {
-      if (tl->term->type == term->type&&isTermEqual (tl->term, term))
+      if (termEqual(tl->term,term))
       {
     	  return 1;
       }
       tl = tl->next;
     }
   return 0;
+}
+
+Term getTermInList(Termlist tl, const Term term)
+{
+	  if (term == NULL)
+	    {
+	      return NULL;
+	    }
+	  while (tl != NULL)
+	    {
+	      if (tl->term->type == term->type&&isTermEqual (tl->term, term))
+	      {
+	    	  return tl->term;
+	      }
+	      tl = tl->next;
+	    }
+	  return NULL;
 }
 
 int hasTicketVariable(Term t){
@@ -99,13 +120,12 @@ int containTermInPlain(Term u,Term t)
 	else return containTermInPlain(u,TermOp1(t))||containTermInPlain(u,TermOp2(t));
 }
 
-
 //check if an agent with different name occurs in accessible positions
 int containDiffAgent(Term t, Term agent)
 {
 	if(realTermLeaf(t))
 	{
-		if(termInList(t->stype,TERM_Agent))
+		if(isAgentVariable(t))
 		{
 			if(agent!=NULL)
 			return !isTermEqual(t,agent);
@@ -121,11 +141,35 @@ int containDiffAgent(Term t, Term agent)
 	else return containDiffAgent(TermOp1(t),agent)||containDiffAgent(TermOp2(t),agent);
 }
 
+//check if t contains agent variables from u
+int containDiffAgentFromTerm(Term t, Term u)
+{
+	if(realTermLeaf(t))
+	{
+		if(isAgentVariable(t))
+		{
+			return isSubterm(t,u);
+		}
+		else return 0;
+	}
+	else if(realTermEncrypt(t))
+	{
+		if(t->helper.fcall) return containDiffAgentFromTerm(TermOp(t),u);
+		return containDiffAgentFromTerm(TermOp(t),u)||containDiffAgentFromTerm(TermKey(t),u);
+	}
+	else return containDiffAgentFromTerm(TermOp1(t),u)||containDiffAgentFromTerm(TermOp2(t),u);
+}
+
+int isAgentVariable(Term t)
+{
+	return termInList(t->stype,TERM_Agent);
+}
+//check if t contains agent variables from a termlist
 int containDiffAgentlist(Term t, Termlist agents)
 {
 	if(realTermLeaf(t))
 	{
-		if(termInList(t->stype,TERM_Agent))
+		if(isAgentVariable(t))
 		{
 			if(agents!=NULL)
 			return !termInList(agents,t);
@@ -451,6 +495,17 @@ int isSubtermInTermlist(Term t, Termlist tl)
 	return 0;
 }
 
+//add fields from term to list
+Termlist addField2Termlist(Termlist tl, Term t)
+{
+	if(realTermTuple(t))
+	{
+		tl = addField2Termlist(tl,TermOp1(t));
+		tl = addField2Termlist(tl,TermOp2(t));
+	}
+	else tl = termlistAdd(tl,t);
+	return tl;
+}
 //check if all terms in list are subterms of t
 int isTermlistSubterm(Term t, Termlist tl)
 {
@@ -731,7 +786,7 @@ Term smallestTermInPatVars(Termlist tl)
 Termlist extractAV(Termlist av, Term t, int agent_only){
 	if(realTermLeaf(t))
 	{
-		if(agent_only==termInList(t->stype, TERM_Agent))
+		if(agent_only==isAgentVariable(t))
 		{
 			return termlistAddNewTerm(av,t);
 		}

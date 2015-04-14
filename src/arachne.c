@@ -2335,30 +2335,12 @@ void initClaimTest(Claimlist cl, int *newruns, int* newgoals)
 }
 
 
-void printRuns(const System sys)
-{
-	int i;
-	for(i = 0; i < sys->maxruns; i++)
-	{
-		eprintf("Run %d in role ",i);
-		printTerm(sys->runs[i].role->nameterm);
-		eprintf(" : ");
-		int j;
-		for(j=0; j< sys->runs[i].step; j++)
-		{
-			Roledef rd = eventRoledef(sys,i,j);
-			roledefPrint(rd);
-		}
-		eprintf("\n");
-	}
-}
-
 //! Arachne single claim test
 void
 arachneClaimTest (Claimlist cl, void (*initFunc)(Claimlist, int*, int*))
 {
   // others we simply test...
-  int run;
+  //int run;
   int newruns = 0;
   int newgoals;
   attack_length = INT_MAX;
@@ -2367,7 +2349,7 @@ arachneClaimTest (Claimlist cl, void (*initFunc)(Claimlist, int*, int*))
   sys->current_claim = cl;
 
   initFunc(cl, &newruns, &newgoals);
-  run = sys->maxruns-1;
+  //run = sys->maxruns-1;
   {
      int realStart (void)
     {
@@ -2404,8 +2386,13 @@ arachneClaimTest (Claimlist cl, void (*initFunc)(Claimlist, int*, int*))
 		      /**
 		       * Add specific goal info and iterate algorithm
 		       */
-  	add_claim_specifics (sys, cl,
+      /*
+      add_claim_specifics (sys, cl,
 			     roledef_shift (sys->runs[run].start, cl->ev),
+			     realStart);
+	 */
+      add_claim_specifics (sys, cl,
+			     roledef_shift (sys->runs[0].start, cl->ev),
 			     realStart);
       if (m0run != -1)
       {

@@ -6,6 +6,17 @@
  */
 #include "absfunc.h"
 //abstraction
+
+int trivialEquationlist(Eqlist eql)
+{
+	Eqlist tmp;
+	for(tmp = eql; tmp!=NULL; tmp=tmp->next)
+	{
+		if(tmp->eq->type!=SYSTEM_TRIVIAL) return 0;
+	}
+	return 1;
+}
+
 int tryAbstractProt1(int (*safecheck)(Protocol), Term (*absfunc)(Term),Protocol p)
 {
 	if(safecheck!=NULL&&!safecheck(p))
@@ -56,9 +67,10 @@ void resetAbsForProtocol(Protocol p)
 	{
 		Roledef roledef = roles->roledef;
 		//for each event in the role
-		while(roledef!=NULL&&roledef->message!=NULL)
+		while(roledef!=NULL)
 		{
-			roledef->absMess=NULL;
+			if(roledef->message!=NULL)
+				roledef->absMess=NULL;
 			roledef=roledef->next;
 		}
 		roles = roles->next;

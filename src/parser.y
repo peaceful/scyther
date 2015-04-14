@@ -97,6 +97,7 @@ List findMacroDefinition(Symbol s)
 %token          SUBTYPING
 %token		ENV
 %token		EQUATIONS
+%token		ESSENTIAL
 
 %type	<tac>	spdlcomplete
 %type	<tac>	spdlrep
@@ -485,6 +486,12 @@ declaration	: secretpref CONST basictermlist typeinfo1 ';'
 		  	t->t1.tac= $2;
 			$$ = t;
 		  }
+		| ESSENTIAL basictermlist ';'
+			{
+				Tac t = tacCreate(TAC_ESSENTIAL);
+				t->t1.tac = $2;
+				$$ = t;				
+			}
 		| secretpref funcORhash basictermlist ';'
 		  {	Tac t = tacCreate(TAC_HASHFUNCTION);
 		  	t->t1.tac = $3;

@@ -393,6 +393,20 @@ defineUsertype (Tac tcdu)
     }
 }
 
+void essentialTerms(Tac tc)
+{
+	while(tc!=NULL)
+	{
+	    Term  t = levelFind (tc->t1.sym, 2);
+	    if (t == NULL)
+		{
+		  /* not declared, that is unacceptable. */
+		  error ("Undeclared value/variable on line %i.", tc->lineno);
+		}
+	    else t->e_sec= t->e_auth =1;
+		tc = tc->next;
+	}
+}
 //! Declare a variable (constant) at the current level
 void
 levelTacDeclaration (Tac tc, int isVar)
@@ -1226,6 +1240,9 @@ normalDeclaration (Tac tc)
       break;
     case TAC_HASHFUNCTION:
       hashfunctions (tc);
+      break;
+    case TAC_ESSENTIAL:
+      essentialTerms(tc->t1.tac);
       break;
     default:
       /* abort with false */

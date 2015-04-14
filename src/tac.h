@@ -63,7 +63,8 @@ enum tactypes
   TAC_TYPING,
   TAC_EQUATIONS,
   TAC_EQUATION,
-  TAC_PERSISTENT_EQUATION
+  TAC_PERSISTENT_EQUATION,
+  TAC_ESSENTIAL
 };
 
 //! Structure to hold the compilation tree nodes

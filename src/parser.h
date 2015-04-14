@@ -74,7 +74,8 @@ extern int yydebug;
     NOT = 284,
     SUBTYPING = 285,
     ENV = 286,
-    EQUATIONS = 287
+    EQUATIONS = 287,
+    ESSENTIAL = 288
   };
 #endif
 
@@ -90,7 +91,7 @@ union YYSTYPE
 	Symbol		symb;
 	int		value;
 
-#line 94 "parser.h" /* yacc.c:1909  */
+#line 95 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1

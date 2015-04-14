@@ -38,28 +38,6 @@
  * ---------------------------------------------------------------
  */
 //! Event dependency structure
-struct depeventgraph
-{
-  //! Flag denoting what it was made for (newrun|newbinding)
-  int fornewrun;
-  //! Number of runs;
-  int runs;
-  //! System where it derives from
-  System sys;
-  //! Number of nodes
-  int n;
-  //! Rowsize
-  int rowsize;
-  //! Graph structure
-  unsigned int *G;
-  //! Zombie dummy push
-  int zombie;
-  //! Previous graph
-  struct depeventgraph *prev;
-};
-
-//! Pointer shorthard
-typedef struct depeventgraph *Depeventgraph;
 
 /*
  * External

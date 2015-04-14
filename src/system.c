@@ -42,7 +42,6 @@ int protocolCount;
 
 //! External
 extern Protocol INTRUDER;
-
 //! Switch for indent or not.
 static int indentState = 0;
 //! Current indent depth.
@@ -429,22 +428,6 @@ run_prefix_recv (const System sys, const int run, Roledef rd,
  * Furthermore, localizes all substitutions occurring in this, which termLocal
  * does not. Any localized substitutions are stored as well in a list.
  */
-/*
-Termlist updateSubst(Termlist substlist, Termlist tl)
-{
-	Termlist tl1 = tl;
-	   while(tl1!=NULL)
-	   {
-		   Termlist tmp = termlistFind(substlist, tl1->term);
-		   if(tmp!=NULL)
-		   {
-			   tmp->term->subst = substlist->term->subst;
-		   }
-		   tl1 = tl1->next;
-	   }
-	return tl;
-}
-*/
 void
 run_localize (const System sys, const int rid, Termlist fromlist,
 	      Termlist tolist, Termlist substlist)
@@ -480,8 +463,6 @@ run_localize (const System sys, const int rid, Termlist fromlist,
 	}
       substlist = substlist->next;
     }
-   //updateSubst(substlist,sys->runs[rid].sigma);
-   //updateSubst(substlist,sys->runs[rid].rho);
 }
 
 
@@ -1152,7 +1133,7 @@ iterateLocalToOther (const System sys, const int myrun,
       tt = tls->term;
       if (realTermVariable (tt) && tt->subst != NULL);
       {
-	iterateTermOther (myrun, tt->subst, addOther);
+    	  iterateTermOther (myrun, tt->subst, addOther);
       }
     }
   // now iterate over all of them

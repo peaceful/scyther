@@ -1180,7 +1180,7 @@ property_check (const System sys)
       //store attack in some structure for re-construct attack in the original model
       if(!attack_checking)
       {
-    	  copyRuns(sys);
+     	  copyRuns(sys);
     	  regular_runs = sys->num_regular_runs;
       }
      }
