@@ -89,14 +89,12 @@ int findIndex(const System sys, int abst_run, int abst_e)
 void copyDependGraph(const System sys)
 {
 	int r1,r2,e1,e2;
-	int b1 = maxruns-1;
-	int b2 = maxruns;
 	nodelist = NULL;
-	for(r1 = 0; r1< b1; r1++)
-		for(r2=r1+1; r2<b2;r2++)
+	for(r1 = 0; r1< maxruns; r1++)
+		for(r2=0; r2!=r1 && r2<maxruns; r2++)
 		{
-			int l1 = sys->runs[runmap[r1]].rolelength;
-			int l2 = sys->runs[runmap[r2]].rolelength;
+			int l1 = sys->runs[runmap[r1]].step;
+			int l2 = sys->runs[runmap[r2]].step;
 			e1 = 0; e2 = 0;
 			while(e1 < l1)
 			{
@@ -123,8 +121,10 @@ void copyDependGraph(const System sys)
 void copyRuns(System sys)
 {
 	 maxruns = 0;
+     regular_runs = sys->num_regular_runs;
+
 	 runs = (Runinfo) realloc (runs, sizeof (struct runinfo) * (sys->maxruns));
-	 runmap = (unsigned int *) realloc (runmap, sys->num_regular_runs * sizeof (unsigned int));
+	 runmap = (unsigned int *) realloc (runmap, regular_runs * sizeof (unsigned int));
 
 	 int i;
 	 for(i=0; i< sys->maxruns;i++)
