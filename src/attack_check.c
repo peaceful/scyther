@@ -124,7 +124,7 @@ void copyRuns(System sys)
 {
 	 maxruns = 0;
 	 runs = (Runinfo) realloc (runs, sizeof (struct runinfo) * (sys->maxruns));
-	 //runmap = (unsigned int *) realloc (runmap, sys->num_regular_runs * sizeof (unsigned int));
+	 runmap = (unsigned int *) realloc (runmap, sys->num_regular_runs * sizeof (unsigned int));
 
 	 int i;
 	 for(i=0; i< sys->maxruns;i++)
@@ -132,11 +132,11 @@ void copyRuns(System sys)
 		 if(sys->runs[i].protocol != INTRUDER)
 		 {
 			 runs[maxruns] = copyRun(sys->runs[i]);
-			 //runmap[maxruns]=i;
+			 runmap[maxruns]=i;
 			 maxruns++;
 		 }
 	 }
-	 //copyDependGraph(sys);
+	 copyDependGraph(sys);
 }
 
 
@@ -193,7 +193,7 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 	//printRuns(original);
 	//eprintf("\n");
 
-	//addDependency();
+	addDependency();
 	//change the switches
 	switches.maxtracelength = tracelength;
 	switches.runs = regular_runs;
