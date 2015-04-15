@@ -55,26 +55,7 @@ struct runinfo copyRun(struct run r)
 	return result;
 }
 
-//copy runs from an abstract attack
-void copyRuns(System sys)
-{
-	 maxruns = 0;
-	 runs = (Runinfo) realloc (runs, sizeof (struct runinfo) * (sys->maxruns));
-	 runmap = (unsigned int *) realloc (runmap, sys->num_regular_runs * sizeof (unsigned int));
-
-	 int i;
-	 for(i=0; i< sys->maxruns;i++)
-	 {
-		 if(sys->runs[i].protocol != INTRUDER)
-		 {
-			 runs[maxruns] = copyRun(sys->runs[i]);
-			 runmap[maxruns]=i;
-			 maxruns++;
-		 }
-	 }
-	 copyDependGraph(sys);
-}
-
+//find the index of the original event that corresponds to the abstract event index in an abstract run
 int findIndex(const System sys, int abst_run, int abst_e)
 {
 	Protocol p = sys->runs[abst_run].protocol;
@@ -104,6 +85,7 @@ int findIndex(const System sys, int abst_run, int abst_e)
 		}
 	return orge;
 }
+
 void copyDependGraph(const System sys)
 {
 	int r1,r2,e1,e2;
@@ -136,6 +118,27 @@ void copyDependGraph(const System sys)
 			}
 		}
 }
+
+//copy runs from an abstract attack
+void copyRuns(System sys)
+{
+	 maxruns = 0;
+	 runs = (Runinfo) realloc (runs, sizeof (struct runinfo) * (sys->maxruns));
+	 //runmap = (unsigned int *) realloc (runmap, sys->num_regular_runs * sizeof (unsigned int));
+
+	 int i;
+	 for(i=0; i< sys->maxruns;i++)
+	 {
+		 if(sys->runs[i].protocol != INTRUDER)
+		 {
+			 runs[maxruns] = copyRun(sys->runs[i]);
+			 //runmap[maxruns]=i;
+			 maxruns++;
+		 }
+	 }
+	 //copyDependGraph(sys);
+}
+
 
 void addDependency()
 {
@@ -190,7 +193,7 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 	//printRuns(original);
 	//eprintf("\n");
 
-	addDependency();
+	//addDependency();
 	//change the switches
 	switches.maxtracelength = tracelength;
 	switches.runs = regular_runs;
