@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "termfunc.h"
-#include "symbfunc.h"
 
 #ifndef EQLIST_H_
 #define EQLIST_H_

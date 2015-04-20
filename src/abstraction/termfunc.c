@@ -271,15 +271,15 @@ void termDestroy(Term t)
 		  {
 			  if(t->type==VARIABLE)
 			  {
-				  removeSymb(t->left.symb);
+				  symbolDelete(t->left.symb);
 				  free(t);
 			  }
 			  return;
 		  }
-	      if (realTermEncrypt (t))
+		  else if (realTermEncrypt (t))
 	      {
 	    	  termDestroy (TermOp (t));
-	    	  termDestroy (TermKey (t));
+			  termDestroy (TermKey (t));
 	      }
 	      else
 	      {

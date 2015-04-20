@@ -5,7 +5,7 @@
  *      Author: nguyen
  */
 #include "abssys.h"
-#define MAX_ABS 10
+#define MAX_ABS 7
 extern System original;
 extern Eqlist eql;
 Symbol pat;
@@ -16,6 +16,7 @@ List outputClaims;
 List falsifiedClaims;
 List verified, falsified;
 Termlist secret;
+Termlist homfunc;
 //Termlist secretav;
 Termlist claims;
 int abstcount;
@@ -66,6 +67,74 @@ void addSecretTerms()
 	}
 }
 
+Roledef findEventContainTerm(Roledef rd, Term t)
+{
+	while(rd!=NULL)
+	{
+		if(rd->type!=CLAIM&&containTermInPlain(t,rd->message))
+			return rd;
+		rd= rd->next;
+	}
+	return NULL;
+}
+
+void addSecretTerm(Termlist tl)
+{
+	Termlist tmp;
+	for(tmp=tl; tmp!=NULL; tmp = tmp->next)
+	{
+		if(isSubtermInTermlist(tmp->term,secret))
+		{
+			if(!termInList(secret,tmp->term->subst))
+				secret = termlistAdd(secret,tmp->term->subst);
+		}
+		else if(isSubtermInTermlist(tmp->term->subst,secret))
+		{
+			if(!termInList(secret,tmp->term))
+				secret = termlistAdd(secret,tmp->term);
+		}
+	}
+}
+
+
+void secrecyAnalysis(Role roles, Role r, Term sec)
+{
+	Termlist av = extractAV(NULL,sec,0);
+	Termlist tl=av;
+	Termlist subs=NULL;
+	Termlist av1=NULL;
+	while(tl!=NULL)
+	{
+		Roledef rd = findEventContainTerm(r->roledef,tl->term);
+		if(rd!=NULL)
+		{
+			Roledef rd1 = findSendRecvEvent(roles,rd);
+			if(rd1!=NULL)
+			{
+				Termlist st = termMguTerm(rd->message, rd1->message);
+				if(st!=MGUFAIL)
+				{
+					subs = termlistConcat(st,subs);
+				}
+			}
+			Termlist tmp = extractAV(NULL,rd->message,0);
+			av1 = termlistConcat(tmp,av1);
+			if(termlistContained(av1,av)) break;
+		}
+		tl=tl->next;
+	}
+	/*
+	Term secterm = buildSecretTerm(sec,subs);
+	termlistSubstReset(subs);
+	if(!inTermlist(secret,secterm))
+		secret = termlistAdd(secret,secterm);
+	*/
+	addSecretTerm(subs);
+	termlistSubstReset(subs);
+	termlistDelete(subs);
+	termlistDelete(av);
+}
+
 void extractSecrets()
 {
 	addSecretTerms();
@@ -92,6 +161,101 @@ void extractSecrets()
 	//secretav=tl;
 }
 
+//check if t and u have the same set of variables and atoms
+int compareAV(Term t, Term u)
+{
+	Termlist av = extractAV(NULL,t,0);
+	Termlist tmp;
+	for(tmp = av; tmp!=NULL; tmp = tmp->next)
+	{
+		if(!isSubterm(tmp->term,u)) return 0;
+	}
+	termlistDelete(av);
+	return 1;
+}
+//check if two list of arguments are compatible, i.e., each argument pair has the same shape and the same set of variables and atoms
+int isCompatibleArgument(Term t, Term u)
+{
+	if(t->type!=u->type) return 0;
+	if(realTermLeaf(t)) return isTermEqual(t,u);
+	else if(realTermEncrypt(t))
+	{
+		if(t->helper.fcall!=u->helper.fcall) return 0;
+		if(t->helper.fcall)
+		{
+			if(!isTermEqual(TermKey(t), TermKey(u))) return 0;
+			return compareAV(TermOp(t), TermOp(u));
+		}
+		else return compareAV(TermOp(t), TermOp(u))&&
+				    compareAV(TermKey(t), TermKey(u));
+	}
+	else return isCompatibleArgument(TermOp1(t), TermOp1(u))&& isCompatibleArgument(TermOp2(t), TermOp2(u));
+}
+
+void extractHashFunc(Term t)
+{
+	if(realTermEncrypt(t))
+	{
+		if(t->helper.fcall)
+			homfunc = termlistAdd(homfunc, TermKey(t));
+		extractHashFunc(TermOp(t));
+		extractHashFunc(TermKey(t));
+	}
+	else if(realTermTuple(t))
+	{
+		extractHashFunc(TermOp1(t));
+		extractHashFunc(TermOp2(t));
+	}
+}
+void extractHomFunc(Term t, Term u)
+{
+	if(t->type==u->type)
+	{
+		if(realTermEncrypt(t))
+		{
+			if(t->helper.fcall&&u->helper.fcall)
+			{
+				if(isTermEqual(TermKey(t), TermKey(u)))
+				{
+					if(isCompatibleArgument(TermOp(t), TermOp(u)))
+						extractHomFunc(TermOp(t), TermOp(u));
+					else extractHashFunc(t);//homfunc = termlistAdd(homfunc, TermKey(t));
+				}
+			}
+			else if(!t->helper.fcall&&!u->helper.fcall)
+			{
+				extractHomFunc(TermKey(t), TermKey(u));
+				extractHomFunc(TermOp(t), TermOp(u));
+			}
+		}
+		else if(realTermTuple(t))
+		{
+			extractHomFunc(TermOp1(t), TermOp1(u));
+			extractHomFunc(TermOp2(t), TermOp2(u));
+		}
+	}
+}
+
+//extract terms that involve equational theory and are handled by oracles
+//for these terms, the transformations should be homomorphic
+void getHomoFunc()
+{
+	Protocol p;
+	for(p = original->protocols; p!=NULL; p = p->next)
+		if(isHelperProtocol(p))
+		{
+			Role r;
+			for(r = p->roles; r!=NULL; r=r->next)
+			{
+				Roledef rd = r->roledef;
+				while(rd!=NULL)
+				{
+					extractHomFunc(rd->message, rd->next->message);
+					rd = rd->next->next;
+				}
+			}
+		}
+}
 
 void abssysInit(){
 	outputClaims=falsifiedClaims=NULL;
@@ -101,6 +265,7 @@ void abssysInit(){
 	initKnowledge();
 	initClaims();
 	extractSecrets();
+	getHomoFunc();
 	addProt2Stack(original);
 }
 
@@ -174,16 +339,6 @@ void freeSystem(System sys)
   systemDone (sys);
 }
 
-Roledef findEventContainTerm(Roledef rd, Term t)
-{
-	while(rd!=NULL)
-	{
-		if(rd->type!=CLAIM&&containTermInPlain(t,rd->message))
-			return rd;
-		rd= rd->next;
-	}
-	return NULL;
-}
 /*
 Term getImage(Term t, Termlist subs)
 {
@@ -230,61 +385,6 @@ Term buildSecretTerm(Term t, Termlist subs)
 }
 
 */
-void addSecretTerm(Termlist tl)
-{
-	Termlist tmp;
-	for(tmp=tl; tmp!=NULL; tmp = tmp->next)
-	{
-		if(isSubtermInTermlist(tmp->term,secret))
-		{
-			if(!termInList(secret,tmp->term->subst))
-				secret = termlistAdd(secret,tmp->term->subst);
-		}
-		else if(isSubtermInTermlist(tmp->term->subst,secret))
-		{
-			if(!termInList(secret,tmp->term))
-				secret = termlistAdd(secret,tmp->term);
-		}
-	}
-}
-void secrecyAnalysis(Role roles, Role r, Term sec)
-{
-	Termlist av = extractAV(NULL,sec,0);
-	Termlist tl=av;
-	Termlist subs=NULL;
-	Termlist av1=NULL;
-	while(tl!=NULL)
-	{
-		Roledef rd = findEventContainTerm(r->roledef,tl->term);
-		if(rd!=NULL)
-		{
-			Roledef rd1 = findSendRecvEvent(roles,rd);
-			if(rd1!=NULL)
-			{
-				Termlist st = termMguTerm(rd->message, rd1->message);
-				if(st!=MGUFAIL)
-				{
-					subs = termlistConcat(st,subs);
-				}
-			}
-			Termlist tmp = extractAV(NULL,rd->message,0);
-			av1 = termlistConcat(tmp,av1);
-			if(termlistContained(av1,av)) break;
-		}
-		tl=tl->next;
-	}
-	/*
-	Term secterm = buildSecretTerm(sec,subs);
-	termlistSubstReset(subs);
-	if(!inTermlist(secret,secterm))
-		secret = termlistAdd(secret,secterm);
-	*/
-	addSecretTerm(subs);
-	termlistSubstReset(subs);
-	termlistDelete(subs);
-	termlistDelete(av);
-}
-
 
 void list_delete_system(List l)
 {
@@ -374,6 +474,7 @@ void runVerification(void (*MC_single)(const System))
  	list_delete_system(absList);
 	deleteEqlist(eql);
 	termlistDelete(secret);
+	termlistDelete(homfunc);
 	//termlistDelete(secretav);
 }
 

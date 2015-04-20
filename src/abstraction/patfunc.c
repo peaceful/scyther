@@ -19,6 +19,7 @@ Term createVariableWithType(Symbol s, Term type)
 	return term;
 }
 
+extern Eqlist eql;
 Term createNewVariableWithType(Term type)
 {
 	Symbol s = symbolNextFree(pat);

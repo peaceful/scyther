@@ -55,10 +55,11 @@ void printEquationlist(Eqlist eql){
 	}
 }
 
+
 void deleteEquation(Equation eq)
 {
 	int diff = (eq->left!=eq->right);
-	termDelete(eq->left);
+	termDestroy(eq->left);
 	if(diff)
 		termDelete(eq->right);
 	free(eq);
@@ -147,6 +148,8 @@ Eqlist deleteNonPersistentEq(Eqlist eqlist)
 			else prev->next=tmp->next;
 			tmp = tmp->next;
 			deleteEquation(tmp1->eq);
+			tmp1->eq = NULL;
+			tmp1->next=NULL;
 			free(tmp1);
 			continue;
 		}

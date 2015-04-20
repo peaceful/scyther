@@ -194,6 +194,10 @@ void mapRuns(Claimlist cl, int* newruns, int* newgoals)
 	//eprintf("\n");
 
 	addDependency();
+	free(runmap);
+	runmap=NULL;
+	free(runs);
+	runs=NULL;
 	//change the switches
 	switches.maxtracelength = tracelength;
 	switches.runs = regular_runs;

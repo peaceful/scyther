@@ -656,6 +656,7 @@ termDelete (const Term term)
 	  termDelete (TermOp1 (term));
 	  termDelete (TermOp2 (term));
 	}
+      termlistDestroy((Termlist)term->subst);
       free (term);
     }
 }

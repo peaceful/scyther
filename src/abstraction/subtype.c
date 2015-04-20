@@ -5,7 +5,7 @@
  *      Author: nguyen
  */
 #include "subtype.h"
-
+extern Termlist homfunc;
 //check if type1 is a subtype of type2
 //exp: type1 = {Agent}Ticket, type2 = {Nonce}Nonce. Note that for types it is more complicated.
 //e.g., type Nonce is a constant, but a constant b is also a constant. So it could be confusing.
@@ -68,6 +68,15 @@ Term subTypeInSubterm(Term sttype, Term type)
 	}
 	return NULL;
 }
+
+Term makeTupleTicket(Term t)
+{
+	if(!realTermTuple(t)) return TERM_Ticket;
+	else
+	{
+		return makeTermTuple(TERM_Ticket, makeTupleTicket(TermOp2(t)));
+	}
+}
 //Derive a type from a given term
 Term getTermType(Term t){
 	if(t==NULL) return NULL;
@@ -86,7 +95,12 @@ Term getTermType(Term t){
 	else if(realTermEncrypt(t))
 	{
 		Term opType = getTermType(TermOp(t));
-		if(t->helper.fcall) type= makeTermFcall(opType,TermKey(t));
+		if(t->helper.fcall)
+		{
+			if(inTermlist(homfunc,TermKey(t)))
+				type = makeTermFcall(makeTupleTicket(TermOp(t)), TermKey(t));
+			else type= makeTermFcall(opType,TermKey(t));
+		}
 		else type = makeTermEncrypt(opType,getTermType(TermKey(t)));
 	}
 	else{
@@ -243,12 +257,12 @@ Term mostGeneralType(Term typ1, Term typ2)
 				}
 			}
 		}
-		else{
+		else
+		{
 			Term op1Gen = mostGeneralType(TermOp1(typ1), TermOp1(typ2));
 			Term op2Gen = mostGeneralType(TermOp2(typ1),TermOp2(typ2));
 			return makeTermTuple(op1Gen,op2Gen);
 		}
 	}
-	return TERM_Ticket;
 }
 

@@ -1149,7 +1149,7 @@ count_false_claim (const System sys)
 }
 
 //! Check properties
-property_check (const System sys)
+int property_check (const System sys)
 {
   int flag;
   int cost;
