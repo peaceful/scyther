@@ -31,10 +31,10 @@
    version 2.2 of Bison.  */
 
 #ifndef YY_YY_PARSER_H_INCLUDED
-# define YY_YY_PARSER_H_INCLUDED
+#define YY_YY_PARSER_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 0
+#define YYDEBUG 0
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -42,41 +42,41 @@ extern int yydebug;
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
-  {
-    ID = 258,
-    TEXT = 259,
-    PROTOCOL = 260,
-    ROLE = 261,
-    READT = 262,
-    RECVT = 263,
-    SENDT = 264,
-    CLAIMT = 265,
-    VAR = 266,
-    CONST = 267,
-    FRESH = 268,
-    RUN = 269,
-    SECRET = 270,
-    COMPROMISED = 271,
-    INVERSEKEYS = 272,
-    INVERSEKEYFUNCTIONS = 273,
-    UNTRUSTED = 274,
-    USERTYPE = 275,
-    SINGULAR = 276,
-    FUNCTION = 277,
-    HASHFUNCTION = 278,
-    KNOWS = 279,
-    TRUSTED = 280,
-    OPTION = 281,
-    MACRO = 282,
-    MATCH = 283,
-    NOT = 284,
-    SUBTYPING = 285,
-    ENV = 286,
-    EQUATIONS = 287,
-    ESSENTIAL = 288
-  };
+#define YYTOKENTYPE
+enum yytokentype
+{
+  ID = 258,
+  TEXT = 259,
+  PROTOCOL = 260,
+  ROLE = 261,
+  READT = 262,
+  RECVT = 263,
+  SENDT = 264,
+  CLAIMT = 265,
+  VAR = 266,
+  CONST = 267,
+  FRESH = 268,
+  RUN = 269,
+  SECRET = 270,
+  COMPROMISED = 271,
+  INVERSEKEYS = 272,
+  INVERSEKEYFUNCTIONS = 273,
+  UNTRUSTED = 274,
+  USERTYPE = 275,
+  SINGULAR = 276,
+  FUNCTION = 277,
+  HASHFUNCTION = 278,
+  KNOWS = 279,
+  TRUSTED = 280,
+  OPTION = 281,
+  MACRO = 282,
+  MATCH = 283,
+  NOT = 284,
+  SUBTYPING = 285,
+  ENV = 286,
+  EQUATIONS = 287,
+  ESSENTIAL = 288
+};
 #endif
 
 /* Value type.  */
@@ -84,17 +84,17 @@ extern int yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 62 "parser.y" /* yacc.c:1909  */
+#line 62 "parser.y"		/* yacc.c:1909  */
 
-	char*  		str;
-	struct tacnode*	tac;
-	Symbol		symb;
-	int		value;
+  char *str;
+  struct tacnode *tac;
+  Symbol symb;
+  int value;
 
-#line 95 "parser.h" /* yacc.c:1909  */
+#line 95 "parser.h"		/* yacc.c:1909  */
 };
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+#define YYSTYPE_IS_TRIVIAL 1
+#define YYSTYPE_IS_DECLARED 1
 #endif
 
 

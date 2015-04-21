@@ -12,7 +12,7 @@ Termlist auth;
 Termlist comp;
 Termlist labeledterm;
 //Termlist oraclecomp;
-Termlist gentype; // in the corresponding relation to the list above
+Termlist gentype;		// in the corresponding relation to the list above
 Termlist topconst;
 Termlist homeq;
 Termlist forbidden;
@@ -21,192 +21,215 @@ Termlist unif;
 extern Eqlist eql;
 System sys;
 Protocol main_prot;
-Term term, smallterm, parentTerm,smalltype, bigterm;
+Term term, smallterm, parentTerm, smalltype, bigterm;
 int currdepth;
 int hasTuple, hasEnc;
 int authProp;
 int typebasedRes, redRes, avRes;
-int UNIFDEPTH=5;
+int UNIFDEPTH = 5;
 enum seclabeltype
 {
- UNDEFINED, NOSEC, MAYBE_SEC,SEC, NOAUTH, MAYBE_AUTH, AUTH
+  UNDEFINED, NOSEC, MAYBE_SEC, SEC, NOAUTH, MAYBE_AUTH, AUTH
 };
 
 enum unif
 {
-	FIXED, NO_FIX, NOT_NEED
+  FIXED, NO_FIX, NOT_NEED
 };
 enum
 {
-NONE,KEYPOS, HASH,MAC,PK,SIG,LTSYM, SYM
-}crytotype;
+  NONE, KEYPOS, HASH, MAC, PK, SIG, LTSYM, SYM
+} crytotype;
 
 enum
 {
-ACCESSIBLE, NOT_ACCESSIBLE
+  ACCESSIBLE, NOT_ACCESSIBLE
 } accessLabel;
-void heuristicInit(System mysys){
-	sys= mysys;
-	labeledterm= NULL;
-	//authav=NULL;
-	auth=topconst=forbidden=comp=gentype=unif=NULL;
-	hasTuple=hasEnc = 0;
-}
-
-void heuristicDone()
+void
+heuristicInit (System mysys)
 {
-	termlistDelete(auth);
-	auth=NULL;
-	//termlistDelete(authav);
-	//authav=NULL;
-	termlistDelete(comp);
-	termlistDelete(topconst);
-	termlistDelete(forbidden);
-	termlistDelete(gentype);
-//	termlistDelete(oraclecomp);
-	termlistDelete(unif);
+  sys = mysys;
+  labeledterm = NULL;
+  //authav=NULL;
+  auth = topconst = forbidden = comp = gentype = unif = NULL;
+  hasTuple = hasEnc = 0;
 }
 
-void extractTopConstructors1(Term t)
+void
+heuristicDone ()
 {
-	if(realTermEncrypt(t))
-	{
-		if(t->helper.fcall)
-		{
-			topconst = termlistAddNewTerm(topconst, TermKey(t));
-			extractTopConstructors1(TermOp(t));
-		}
-		else
-		{
-			hasEnc = 1;
-			extractTopConstructors1(TermOp(t));
-			extractTopConstructors1(TermKey(t));
-		}
-	}
+  termlistDelete (auth);
+  auth = NULL;
+  //termlistDelete(authav);
+  //authav=NULL;
+  termlistDelete (comp);
+  termlistDelete (topconst);
+  termlistDelete (forbidden);
+  termlistDelete (gentype);
+//      termlistDelete(oraclecomp);
+  termlistDelete (unif);
 }
-void extractTopConstructors(Term t1, Term t2)
+
+void
+extractTopConstructors1 (Term t)
 {
-	int istuple1 = realTermTuple(t1);
-	int istuple2 = realTermTuple(t2);
-	if(istuple1&&istuple2)
+  if (realTermEncrypt (t))
+    {
+      if (t->helper.fcall)
 	{
-		extractTopConstructors(TermOp1(t1), TermOp1(t2));
-		extractTopConstructors(TermOp2(t1), TermOp2(t2));
+	  topconst = termlistAddNewTerm (topconst, TermKey (t));
+	  extractTopConstructors1 (TermOp (t));
 	}
-	else if(istuple1)
+      else
 	{
-		if(isTicketVariable(t2)) hasTuple=1;
+	  hasEnc = 1;
+	  extractTopConstructors1 (TermOp (t));
+	  extractTopConstructors1 (TermKey (t));
 	}
-	else if(istuple2)
-	{
-		if(isTicketVariable(t1)) hasTuple=1;
-	}
-	else
-	{
-		int isLeaf1 = realTermLeaf(t1);
-		int isLeaf2 = realTermLeaf(t2);
-		if(!isLeaf1&&!isLeaf2)
-		{
-			if(t1->type!=t2->type) return;
-			if(t1->type==ENCRYPT)
-			{
-				extractTopConstructors(TermOp(t1), TermOp(t2));
-				extractTopConstructors(TermKey(t1), TermKey(t2));
-			}
-			else if(isTermEqual(TermKey(t1), TermKey(t2)))
-				extractTopConstructors(TermOp(t1), TermOp(t2));
-		}
-		else if(isTicketVariable(t2))
-		{
-			extractTopConstructors1(t1);
-		}
-		else if(isTicketVariable(t1))
-		{
-			extractTopConstructors1(t2);
-		}
-	}
-}
-void extractAuthTermFromSignals(List running, List commit){
-	while(commit!=NULL){
-		Roledef comm = (Roledef)commit->data;
-		Roledef runn = findMatchingRun(running,comm);
-		if(runn==NULL) return;
-		//authav=extractAV(authav,runn->message,0);
-		//authav=extractAV(authav,comm->message,0);
-
-		auth = addField2Termlist(auth,runn->message);
-		auth = addField2Termlist(auth,comm->message);
-
-		extractTopConstructors(comm->message, runn->message);
-		commit=commit->next;
-	}
+    }
 }
 
-
-void setMainProtocol()
+void
+extractTopConstructors (Term t1, Term t2)
 {
-	Protocol prot = sys->protocols;
-	while(prot!=NULL)
+  int istuple1 = realTermTuple (t1);
+  int istuple2 = realTermTuple (t2);
+  if (istuple1 && istuple2)
+    {
+      extractTopConstructors (TermOp1 (t1), TermOp1 (t2));
+      extractTopConstructors (TermOp2 (t1), TermOp2 (t2));
+    }
+  else if (istuple1)
+    {
+      if (isTicketVariable (t2))
+	hasTuple = 1;
+    }
+  else if (istuple2)
+    {
+      if (isTicketVariable (t1))
+	hasTuple = 1;
+    }
+  else
+    {
+      int isLeaf1 = realTermLeaf (t1);
+      int isLeaf2 = realTermLeaf (t2);
+      if (!isLeaf1 && !isLeaf2)
 	{
-		if(!isHelperProtocol(prot))
-		{
-			main_prot=prot;
-			return;
-		}
-		prot=prot->next;
+	  if (t1->type != t2->type)
+	    return;
+	  if (t1->type == ENCRYPT)
+	    {
+	      extractTopConstructors (TermOp (t1), TermOp (t2));
+	      extractTopConstructors (TermKey (t1), TermKey (t2));
+	    }
+	  else if (isTermEqual (TermKey (t1), TermKey (t2)))
+	    extractTopConstructors (TermOp (t1), TermOp (t2));
 	}
+      else if (isTicketVariable (t2))
+	{
+	  extractTopConstructors1 (t1);
+	}
+      else if (isTicketVariable (t1))
+	{
+	  extractTopConstructors1 (t2);
+	}
+    }
 }
 
-void leafLabelInit(Term t)
+void
+extractAuthTermFromSignals (List running, List commit)
 {
-	t->seclabel.gb_auth=t->seclabel.prop_auth=t->seclabel.prot_auth = UNDEFINED;
-	t->seclabel.gb_sec=t->seclabel.prop_sec=t->seclabel.prot_sec=UNDEFINED;
-	t->accessible=NOT_ACCESSIBLE;
-	t->inIK=UNKNOWN;
+  while (commit != NULL)
+    {
+      Roledef comm = (Roledef) commit->data;
+      Roledef runn = findMatchingRun (running, comm);
+      if (runn == NULL)
+	return;
+      //authav=extractAV(authav,runn->message,0);
+      //authav=extractAV(authav,comm->message,0);
+
+      auth = addField2Termlist (auth, runn->message);
+      auth = addField2Termlist (auth, comm->message);
+
+      extractTopConstructors (comm->message, runn->message);
+      commit = commit->next;
+    }
 }
 
-void tmpLabelInit(Term t)
+
+void
+setMainProtocol ()
 {
-	t->seclabel.tmp_auth = t->seclabel.tmp_sec = UNDEFINED;
+  Protocol prot = sys->protocols;
+  while (prot != NULL)
+    {
+      if (!isHelperProtocol (prot))
+	{
+	  main_prot = prot;
+	  return;
+	}
+      prot = prot->next;
+    }
 }
-void labelInit(Term t, void (*initLabel)(Term))
+
+void
+leafLabelInit (Term t)
 {
-	initLabel(t);
-	if(realTermEncrypt(t))
-	{
-		labelInit(TermOp(t), initLabel);
-		if(!t->helper.fcall) labelInit(TermKey(t), initLabel);
-	}
-	else if(realTermTuple(t))
-	{
-		labelInit(TermOp1(t), initLabel);
-		labelInit(TermOp2(t), initLabel);
-	}
+  t->seclabel.prop_auth = t->seclabel.prot_auth = UNDEFINED;
+  t->seclabel.prop_sec = t->seclabel.prot_sec = UNDEFINED;
+  t->accessible = NOT_ACCESSIBLE;
+  t->inIK = UNKNOWN;
+}
+
+void
+tmpLabelInit (Term t)
+{
+  t->seclabel.tmp_auth = t->seclabel.tmp_sec = UNDEFINED;
+}
+
+void
+labelInit (Term t, void (*initLabel) (Term))
+{
+  initLabel (t);
+  if (realTermEncrypt (t))
+    {
+      labelInit (TermOp (t), initLabel);
+      if (!t->helper.fcall)
+	labelInit (TermKey (t), initLabel);
+    }
+  else if (realTermTuple (t))
+    {
+      labelInit (TermOp1 (t), initLabel);
+      labelInit (TermOp2 (t), initLabel);
+    }
 }
 
 
 //check if a term's type disjoint fro all types specified in equation list
-int typeDisjointFromEqlist(Term t)
+int
+typeDisjointFromEqlist (Term t)
 {
-	Term type1 = getTermType(t);
-	Eqlist tmp = eql;
-	while(tmp!=NULL)
-	{
-		Term type2 = getTermType(tmp->eq->left);
-		if(isComparable(type1,type2)) return 0;
-		tmp = tmp->next;
-	}
-	return 1;
+  Term type1 = getTermType (t);
+  Eqlist tmp = eql;
+  while (tmp != NULL)
+    {
+      Term type2 = getTermType (tmp->eq->left);
+      if (isComparable (type1, type2))
+	return 0;
+      tmp = tmp->next;
+    }
+  return 1;
 }
 
-Term getMostGeneralTypeInlist(Termlist tl, Term type)
+Term
+getMostGeneralTypeInlist (Termlist tl, Term type)
 {
-	while(tl!=NULL)
-	{
-		type = mostGeneralType(type,tl->term);
-		tl=tl->next;
-	}
-	return type;
+  while (tl != NULL)
+    {
+      type = mostGeneralType (type, tl->term);
+      tl = tl->next;
+    }
+  return type;
 }
 
 /*
@@ -226,121 +249,131 @@ Term mostGenTypeOracle(Term type)
 }
 */
 
-void updateGenType(Term type)
+void
+updateGenType (Term type)
 {
-	Termlist tl;
-	Termlist newgen=NULL;
-	Termlist conflict=NULL;
-	Term commType;
-	//search for conflicts
-	for(tl=gentype;tl!=NULL;tl=tl->next)
+  Termlist tl;
+  Termlist newgen = NULL;
+  Termlist conflict = NULL;
+  Term commType;
+  //search for conflicts
+  for (tl = gentype; tl != NULL; tl = tl->next)
+    {
+      commType = upperCommonSubtype (tl->term, type);
+      if (commType != NULL && !isTermEqual (commType, type))
 	{
-		commType= upperCommonSubtype(tl->term,type);
-		if(commType!=NULL&&!isTermEqual(commType,type))
-		{
-			conflict =termlistAdd(conflict,tl->term);
-		}
-		else newgen = termlistAdd(newgen,tl->term);
+	  conflict = termlistAdd (conflict, tl->term);
 	}
-	if(conflict==NULL)
-	{
-		termlistDelete(newgen);
-		gentype=termlistAdd(gentype,type);
-	}
-	else
-	{
-		Term newtype = getMostGeneralTypeInlist(conflict,type);
-		newgen = termlistAdd(newgen,newtype);
-		termlistDelete(gentype);
-		gentype=newgen;
-	}
+      else
+	newgen = termlistAdd (newgen, tl->term);
+    }
+  if (conflict == NULL)
+    {
+      termlistDelete (newgen);
+      gentype = termlistAdd (gentype, type);
+    }
+  else
+    {
+      Term newtype = getMostGeneralTypeInlist (conflict, type);
+      newgen = termlistAdd (newgen, newtype);
+      termlistDelete (gentype);
+      gentype = newgen;
+    }
 }
 
 //not necessarily the type of the term, but the type is supposed to be assigned to the corresponding pattern
-Term getIntendedPatternType(Term t)
+Term
+getIntendedPatternType (Term t)
 {
-	Term type = getTermType(t);
-	Termlist tl;
-	for(tl= gentype;tl!=NULL;tl=tl->next)
-	{
-		Term t = subTypeInSubterm(type, tl->term);
-		if(t) return t;
-	}
-	return type;
+  Term type = getTermType (t);
+  Termlist tl;
+  for (tl = gentype; tl != NULL; tl = tl->next)
+    {
+      Term t = subTypeInSubterm (type, tl->term);
+      if (t)
+	return t;
+    }
+  return type;
 }
 
 //add a term of more general type or is deeper in term of structure (if the two types have common subtype)
-void addTermForAbstraction(Term t)
+void
+addTermForAbstraction (Term t)
 {
-	Termlist tmp = comp;
-	Term type = getTermType(t);
-	Termlist conflict=NULL;
-	while(tmp!=NULL)
+  Termlist tmp = comp;
+  Term type = getTermType (t);
+  Termlist conflict = NULL;
+  while (tmp != NULL)
+    {
+      Term type1 = getTermType (tmp->term);
+      Term commType = upperCommonSubtype (type, type1);
+      if (commType != NULL)
 	{
-		Term type1 = getTermType(tmp->term);
-		Term commType = upperCommonSubtype(type,type1);
-		if(commType!=NULL)
-		{
-			if(isTermEqual(commType,type))
-			{
-				return;
-			}
-			else
-			{
-				if(!isTermEqual(commType,type1))
-				conflict = termlistAdd(conflict,type1);
-				/*
-				Termlist tmp1 = tmp->next;
-				comp=termlistDelTerm(tmp);
-				tmp = tmp1;
-				continue;
-				*/
-			}
-		}
-		tmp = tmp->next;
+	  if (isTermEqual (commType, type))
+	    {
+	      return;
+	    }
+	  else
+	    {
+	      if (!isTermEqual (commType, type1))
+		conflict = termlistAdd (conflict, type1);
+	      /*
+	         Termlist tmp1 = tmp->next;
+	         comp=termlistDelTerm(tmp);
+	         tmp = tmp1;
+	         continue;
+	       */
+	    }
 	}
-	t->originType=type;
-	forbidden = termlistAdd(forbidden, t);
-	Term newgentype = getMostGeneralTypeInlist(conflict,type);
-	//newgentype = mostGenTypeOracle(newgentype);
-	updateGenType(newgentype);
-	termlistDelete(conflict);
-	comp=termlistAdd(comp,t);
+      tmp = tmp->next;
+    }
+  t->originType = type;
+  forbidden = termlistAdd (forbidden, t);
+  Term newgentype = getMostGeneralTypeInlist (conflict, type);
+  //newgentype = mostGenTypeOracle(newgentype);
+  updateGenType (newgentype);
+  termlistDelete (conflict);
+  comp = termlistAdd (comp, t);
 }
 
-int coveredByFixEquations(Term type)
+int
+coveredByFixEquations (Term type)
 {
-	//check if it is covered by a fixed homomorphic equation created by the system
-	if(realTermEncrypt(type)&&type->helper.fcall&&inTermlist(topconst,TermKey(type)))
-			return 1;
-	Eqlist tmp = eql;
-	while(tmp!=NULL)
+  //check if it is covered by a fixed homomorphic equation created by the system
+  if (realTermEncrypt (type) && type->helper.fcall
+      && inTermlist (topconst, TermKey (type)))
+    return 1;
+  Eqlist tmp = eql;
+  while (tmp != NULL)
+    {
+      //it may be covered by an user-defined equation
+      if (tmp->eq->type < SYSTEM_TRIVIAL)
 	{
-		//it may be covered by an user-defined equation
-		if(tmp->eq->type<SYSTEM_TRIVIAL)
-		{
-			Term type1 = getTermType(tmp->eq->left);
-			if(isSubtype(type,type1)) return 1;
-		}
-		tmp = tmp->next;
+	  Term type1 = getTermType (tmp->eq->left);
+	  if (isSubtype (type, type1))
+	    return 1;
 	}
-	return 0;
+      tmp = tmp->next;
+    }
+  return 0;
 }
 
 //collect composed terms at top level, requiring that no two term-types have a common subtype.
-void getTopComposed(Term t)
+void
+getTopComposed (Term t)
 {
-	if(realTermEncrypt(t))
-	{
-		//if(!typeDisjointFromEqlist(t)) return ;
-		if(coveredByFixEquations(t)) return;
-		addTermForAbstraction(t);
-	}
-	else if(realTermTuple(t))
-	{
-		getTopComposed(TermOp1(t));
-		getTopComposed(TermOp2(t));
-	}
+  if (realTermEncrypt (t))
+    {
+      //if(!typeDisjointFromEqlist(t)) return ;
+      if (coveredByFixEquations (t))
+	return;
+      addTermForAbstraction (t);
+    }
+  else if (realTermTuple (t))
+    {
+      getTopComposed (TermOp1 (t));
+      getTopComposed (TermOp2 (t));
+    }
 }
 
 /*
@@ -359,257 +392,297 @@ void getOracleComposedType(Term t)
 }
 */
 
-int plaintextSecure(Term t)
+int
+plaintextSecure (Term t)
 {
-	if(realTermLeaf(t)) return t->seclabel.prot_auth==AUTH&&t->seclabel.prop_sec==SEC;
-	if(realTermEncrypt(t)) return plaintextSecure(TermOp(t));
-	return plaintextSecure(TermOp1(t))||plaintextSecure(TermOp2(t));
+  if (realTermLeaf (t))
+    return t->seclabel.prot_auth == AUTH && t->seclabel.prop_sec == SEC;
+  if (realTermEncrypt (t))
+    return plaintextSecure (TermOp (t));
+  return plaintextSecure (TermOp1 (t)) || plaintextSecure (TermOp2 (t));
 }
 
-int plaintextTmpSecure(Term t)
+int
+plaintextTmpSecure (Term t)
 {
-	if(realTermLeaf(t)) return t->seclabel.tmp_auth==AUTH&&t->seclabel.tmp_sec==SEC;
-	if(realTermEncrypt(t)) return plaintextTmpSecure(TermOp(t));
-	return plaintextTmpSecure(TermOp1(t))||plaintextTmpSecure(TermOp2(t));
+  if (realTermLeaf (t))
+    return t->seclabel.tmp_auth == AUTH && t->seclabel.tmp_sec == SEC;
+  if (realTermEncrypt (t))
+    return plaintextTmpSecure (TermOp (t));
+  return plaintextTmpSecure (TermOp1 (t)) || plaintextTmpSecure (TermOp2 (t));
 }
 
-struct cryptolabel getCryptoLabel(Term t)
+struct cryptolabel
+getCryptoLabel (Term t)
 {
-	struct cryptolabel lb;
-	lb.auth_crypt = NOAUTH;
-	lb.sec_crypt = NOSEC;
-	if(realTermEncrypt(t))
+  struct cryptolabel lb;
+  lb.auth_crypt = NOAUTH;
+  lb.sec_crypt = NOSEC;
+  if (realTermEncrypt (t))
+    {
+      Term op = TermOp (t);
+      if (t->helper.fcall)
 	{
-		Term op = TermOp(t);
-		if(t->helper.fcall)
-		{
-			if(isInverseKey(TermKey(t)))
-			{
-				lb.sec_crypt = NOSEC;
-				lb.auth_crypt = NOAUTH;
-			}
-			else if(containLTSharedKeyInPlain(op)!=NULL) //it is a MAC
-			{
-				lb.sec_crypt=SEC;
-				lb.auth_crypt=AUTH;
-			}
-			else
-			{
-				lb.sec_crypt = SEC;
-			}
-		}
-		else
-		{
-			Term key = TermKey(t);
-			if(isPublicKey(key)) //if it is public-key encryption
-			{
-				//check if some agent identifiers are there
-				if(containDiffAgent(op,TermOp(key)))
-				{
-					lb.sec_crypt=SEC;
-					lb.auth_crypt=AUTH;
-				}
-				else
-				{
-					lb.sec_crypt = SEC;
-				}
-			}
-			else if(isPrivateKey(key))// if it is a signature
-			{
-				lb.auth_crypt = AUTH;
-			}
-			else if(isLTSharedKey(key))
-			{
-				lb.sec_crypt=SEC;
-				lb.auth_crypt=AUTH;
-			}
-			else //symmetric encryption with a session key
-			{
-				lb.sec_crypt = key->accessible==NOT_ACCESSIBLE?SEC:MAYBE_SEC;
-				if(containDiffAgent(op,NULL))
-					lb.auth_crypt = MAYBE_AUTH;
-			}
-		}
+	  if (isInverseKey (TermKey (t)))
+	    {
+	      lb.sec_crypt = NOSEC;
+	      lb.auth_crypt = NOAUTH;
+	    }
+	  else if (containLTSharedKeyInPlain (op) != NULL)	//it is a MAC
+	    {
+	      lb.sec_crypt = SEC;
+	      lb.auth_crypt = AUTH;
+	    }
+	  else
+	    {
+	      lb.sec_crypt = SEC;
+	    }
 	}
-	return lb;
+      else
+	{
+	  Term key = TermKey (t);
+	  if (isPublicKey (key))	//if it is public-key encryption
+	    {
+	      //check if some agent identifiers are there
+	      if (containDiffAgent (op, TermOp (key)))
+		{
+		  lb.sec_crypt = SEC;
+		  lb.auth_crypt = AUTH;
+		}
+	      else
+		{
+		  lb.sec_crypt = SEC;
+		}
+	    }
+	  else if (isPrivateKey (key))	// if it is a signature
+	    {
+	      lb.auth_crypt = AUTH;
+	    }
+	  else if (isLTSharedKey (key))
+	    {
+	      lb.sec_crypt = SEC;
+	      lb.auth_crypt = AUTH;
+	    }
+	  else			//symmetric encryption with a session key
+	    {
+	      lb.sec_crypt =
+		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
+	      if (containDiffAgent (op, NULL))
+		lb.auth_crypt = MAYBE_AUTH;
+	    }
+	}
+    }
+  return lb;
 }
 
-int isInverseKey(Term t)
+int
+isInverseKey (Term t)
 {
-	Termlist tl = sys->know->inversekeys;
-	Termlist prev = NULL;
-	while(tl!=NULL)
+  Termlist tl = sys->know->inversekeys;
+  Termlist prev = NULL;
+  while (tl != NULL)
+    {
+      if (isTermEqual (tl->term, t))
 	{
-		if(isTermEqual(tl->term,t))
-		{
-			if(prev==NULL) return 1;
-			else if(prev->term->left.symb->text[0]=='_')
-				return 0;
-			else return 1;
-		}
-		prev=tl;
-		tl = tl->next;
+	  if (prev == NULL)
+	    return 1;
+	  else if (prev->term->left.symb->text[0] == '_')
+	    return 0;
+	  else
+	    return 1;
 	}
-	return 0;
-}
-void computeProtLabel(Term t, int seclabel, int authlabel, int access)
-{
-	if(access==ACCESSIBLE) t->accessible=access;
-	if(seclabel!=NOSEC||authlabel!=NOAUTH)
-	{
-		if(t->inIK==YES||(t->inIK==UNKNOWN&&inKnowledge(sys->know,t)))
-		{
-			t->seclabel.prot_sec=NOSEC;
-			t->seclabel.prot_auth=NOAUTH;
-			t->inIK=YES;
-			return;
-		}
-	}
-	if(t->seclabel.prot_sec==UNDEFINED) t->seclabel.prot_sec=seclabel;
-	else t->seclabel.prot_sec= min(t->seclabel.prot_sec,seclabel);
-	if(t->seclabel.prot_auth==UNDEFINED) t->seclabel.prot_auth=authlabel;
-	else t->seclabel.prot_auth= max(t->seclabel.prot_auth,authlabel);
-
-	//update by other occurrences of t
-	if(!realTermLeaf(t))
-	{
-		Term u = getTermInList(labeledterm,t);
-		if(u==NULL)
-			labeledterm = termlistAdd(labeledterm,t);
-		else
-		{
-			t->seclabel.prot_auth = max(t->seclabel.prot_auth,u->seclabel.prot_auth);
-			t->seclabel.prot_sec = min(t->seclabel.prot_sec,u->seclabel.prot_sec);
-		}
-	}
-
-	if(realTermEncrypt(t))
-	{
-		Term op = TermOp(t);
-		struct cryptolabel clb = getCryptoLabel(t);
-		int newsec = max(seclabel,clb.sec_crypt);
-		int newauth = max(authlabel,clb.auth_crypt);
-		if(t->helper.fcall)
-		{
-			if(isInverseKey(TermKey(t)))
-				computeProtLabel(op,seclabel,authlabel,access);
-			else computeProtLabel(op,newsec,newauth,NOT_ACCESSIBLE);
-		}
-		else
-		{
-			Term key = TermKey(t);
-			computeProtLabel(op,newsec,newauth, access);
-			if(!isLTKey(key))
-			{
-				computeProtLabel(key,SEC,NOAUTH, NOT_ACCESSIBLE);
-			}
-		}
-	}
-	else if(realTermTuple(t))
-	{
-		computeProtLabel(TermOp1(t),seclabel,authlabel, access);
-		computeProtLabel(TermOp2(t),seclabel,authlabel, access);
-	}
+      prev = tl;
+      tl = tl->next;
+    }
+  return 0;
 }
 
-
-void computeTmpLabel(Term t, int seclabel, int authlabel, int access)
+void
+computeProtLabel (Term t, int seclabel, int authlabel, int access)
 {
-	if(access==ACCESSIBLE) t->accessible=access;
-	if(seclabel!=NOSEC||authlabel!=NOAUTH)
+  if (access == ACCESSIBLE)
+    t->accessible = access;
+  if (seclabel != NOSEC || authlabel != NOAUTH)
+    {
+      if (t->inIK == YES
+	  || (t->inIK == UNKNOWN && inKnowledge (sys->know, t)))
 	{
-		if(t->inIK==YES||(t->inIK==UNKNOWN&&inKnowledge(sys->know,t)))
-		{
-			t->seclabel.tmp_sec=NOSEC;
-			t->seclabel.tmp_auth=NOAUTH;
-		}
+	  t->seclabel.prot_sec = NOSEC;
+	  t->seclabel.prot_auth = NOAUTH;
+	  t->inIK = YES;
+	  return;
 	}
-	if(t->seclabel.tmp_sec==UNDEFINED) t->seclabel.tmp_sec=seclabel;
-	else t->seclabel.tmp_sec= min(t->seclabel.tmp_sec,seclabel);
-	if(t->seclabel.tmp_auth==UNDEFINED) t->seclabel.tmp_auth=authlabel;
-	else t->seclabel.tmp_auth= max(t->seclabel.tmp_auth,authlabel);
+    }
+  if (t->seclabel.prot_sec == UNDEFINED)
+    t->seclabel.prot_sec = seclabel;
+  else
+    t->seclabel.prot_sec = min (t->seclabel.prot_sec, seclabel);
+  if (t->seclabel.prot_auth == UNDEFINED)
+    t->seclabel.prot_auth = authlabel;
+  else
+    t->seclabel.prot_auth = max (t->seclabel.prot_auth, authlabel);
 
-	if(realTermEncrypt(t))
+  //update by other occurrences of t
+  if (!realTermLeaf (t))
+    {
+      Term u = getTermInList (labeledterm, t);
+      if (u == NULL)
+	labeledterm = termlistAdd (labeledterm, t);
+      else
 	{
-		Term op = TermOp(t);
-		if(t->helper.fcall)
-		{
-			if(isInverseKey(TermKey(t)))
-				computeTmpLabel(op,seclabel, authlabel, access);
-			else if(containLTSharedKeyInPlain(op)!=NULL) //it is a MAC
-			computeTmpLabel(op,SEC,AUTH,NOT_ACCESSIBLE);
-			else
-			{
-				if(plaintextTmpSecure(op))
-				{
-					//t->auth=AUTH; //new
-					computeTmpLabel(op, SEC, AUTH,NOT_ACCESSIBLE);
-				}
-				else computeTmpLabel(op, SEC, authlabel,NOT_ACCESSIBLE);//otherwise, a normal hash
-			}
-		}
-		else
-		{
-			Term key = TermKey(t);
-			if(isPublicKey(key)) //if it is public-key encryption
-			{
-				//check if some agent identifiers are there
-				if(containDiffAgent(op,TermOp(key)))
-				{
-					computeTmpLabel(op,SEC,AUTH, access);
-				}
-				else
-				{
-					if(plaintextTmpSecure(op))
-						computeTmpLabel(op, SEC, AUTH, access);
-					else computeTmpLabel(op,SEC,authlabel, access);
-				}
-			}
-			else if(isPrivateKey(key))// if it is a signature
-			{
-				computeTmpLabel(op,seclabel,AUTH, access);
-			}
-			else if(isLTSharedKey(key))
-			{
-				computeTmpLabel(op,SEC,AUTH, access);
-			}
-			else //symmetric encryption with a session key
-			{
-				int newsec = key->accessible==NOT_ACCESSIBLE?SEC:MAYBE_SEC;
-				int newauth = containDiffAgent(op,NULL)?max(authlabel,MAYBE_AUTH):authlabel;
-				computeTmpLabel(op, newsec, newauth, access);
-			}
-		}
+	  t->seclabel.prot_auth =
+	    max (t->seclabel.prot_auth, u->seclabel.prot_auth);
+	  t->seclabel.prot_sec =
+	    min (t->seclabel.prot_sec, u->seclabel.prot_sec);
 	}
-	else if(realTermTuple(t))
+    }
+
+  if (realTermEncrypt (t))
+    {
+      Term op = TermOp (t);
+      struct cryptolabel clb = getCryptoLabel (t);
+      int newsec = max (seclabel, clb.sec_crypt);
+      int newauth = max (authlabel, clb.auth_crypt);
+      if (t->helper.fcall)
 	{
-		computeTmpLabel(TermOp1(t),seclabel,authlabel, access);
-		computeTmpLabel(TermOp2(t),seclabel,authlabel, access);
+	  if (isInverseKey (TermKey (t)))
+	    computeProtLabel (op, seclabel, authlabel, access);
+	  else
+	    computeProtLabel (op, newsec, newauth, NOT_ACCESSIBLE);
 	}
+      else
+	{
+	  Term key = TermKey (t);
+	  computeProtLabel (op, newsec, newauth, access);
+	  if (!isLTKey (key))
+	    {
+	      computeProtLabel (key, SEC, NOAUTH, NOT_ACCESSIBLE);
+	    }
+	}
+    }
+  else if (realTermTuple (t))
+    {
+      computeProtLabel (TermOp1 (t), seclabel, authlabel, access);
+      computeProtLabel (TermOp2 (t), seclabel, authlabel, access);
+    }
 }
 
-int essentialForAuth(Term t)
+
+void
+computeTmpLabel (Term t, int seclabel, int authlabel, int access)
 {
-	if(t->e_auth!=UNKNOWN) return t->e_auth;
-	if(t->inIK)
+  if (access == ACCESSIBLE)
+    t->accessible = access;
+  if (seclabel != NOSEC || authlabel != NOAUTH)
+    {
+      if (t->inIK == YES
+	  || (t->inIK == UNKNOWN && inKnowledge (sys->know, t)))
 	{
-		t->e_auth = NO;
+	  t->seclabel.tmp_sec = NOSEC;
+	  t->seclabel.tmp_auth = NOAUTH;
 	}
-	else t->e_auth = isSubtermInTermlist(t,auth)?YES:NO;
-	return t->e_auth;
+    }
+  if (t->seclabel.tmp_sec == UNDEFINED)
+    t->seclabel.tmp_sec = seclabel;
+  else
+    t->seclabel.tmp_sec = min (t->seclabel.tmp_sec, seclabel);
+  if (t->seclabel.tmp_auth == UNDEFINED)
+    t->seclabel.tmp_auth = authlabel;
+  else
+    t->seclabel.tmp_auth = max (t->seclabel.tmp_auth, authlabel);
+  if (realTermEncrypt (t))
+    {
+      Term op = TermOp (t);
+      if (t->helper.fcall)
+	{
+	  if (isInverseKey (TermKey (t)))
+	    computeTmpLabel (op, seclabel, authlabel, access);
+	  else if (containLTSharedKeyInPlain (op) != NULL)	//it is a MAC
+	    computeTmpLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
+	  else
+	    {
+	      if (plaintextTmpSecure (op))
+		{
+		  //t->auth=AUTH; //new
+		  computeTmpLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
+		}
+	      else
+		computeTmpLabel (op, SEC, authlabel, NOT_ACCESSIBLE);	//otherwise, a normal hash
+	    }
+	}
+      else
+	{
+	  Term key = TermKey (t);
+	  if (isPublicKey (key))	//if it is public-key encryption
+	    {
+	      //check if some agent identifiers are there
+	      if (containDiffAgent (op, TermOp (key)))
+		{
+		  computeTmpLabel (op, SEC, AUTH, access);
+		}
+	      else
+		{
+		  if (plaintextTmpSecure (op))
+		    computeTmpLabel (op, SEC, AUTH, access);
+		  else
+		    computeTmpLabel (op, SEC, authlabel, access);
+		}
+	    }
+	  else if (isPrivateKey (key))	// if it is a signature
+	    {
+	      computeTmpLabel (op, seclabel, AUTH, access);
+	    }
+	  else if (isLTSharedKey (key))
+	    {
+	      computeTmpLabel (op, SEC, AUTH, access);
+	    }
+	  else			//symmetric encryption with a session key
+	    {
+	      int newsec =
+		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
+	      int newauth = containDiffAgent (op, NULL) ? max (authlabel,
+							       MAYBE_AUTH) :
+		authlabel;
+	      computeTmpLabel (op, newsec, newauth, access);
+	    }
+	}
+    }
+  else if (realTermTuple (t))
+    {
+      computeTmpLabel (TermOp1 (t), seclabel, authlabel, access);
+      computeTmpLabel (TermOp2 (t), seclabel, authlabel, access);
+    }
 }
 
-int essentialForSec(Term t)
+int
+essentialForAuth (Term t)
 {
-	if(t->e_sec!=UNKNOWN) return t->e_sec;
-	if(t->inIK)
-	{
-		t->e_sec = NO;
-	}
-	else t->e_sec = isSubtermInTermlist(t,secret)?YES:NO;
-	return t->e_sec;
+  if (t->e_auth != UNKNOWN)
+    return t->e_auth;
+  if (t->inIK)
+    {
+      t->e_auth = NO;
+    }
+  else
+    t->e_auth = isSubtermInTermlist (t, auth) ? YES : NO;
+  return t->e_auth;
 }
 
+int
+essentialForSec (Term t)
+{
+  if (t->e_sec != UNKNOWN)
+    return t->e_sec;
+  if (t->inIK)
+    {
+      t->e_sec = NO;
+    }
+  else
+    t->e_sec = isSubtermInTermlist (t, secret) ? YES : NO;
+  return t->e_sec;
+}
+
+/*
 void computeGlobalLabel(Term t)
 {
 	if(t->seclabel.gb_auth==UNDEFINED)
@@ -633,33 +706,40 @@ void computeGlobalLabel(Term t)
 		t->seclabel.gb_sec = min(t->seclabel.prot_sec,t->seclabel.prop_sec);
 	}
 }
+*/
 
-
-int isLabelPreserving(Term t)
+int
+isLabelPreserving (Term t)
 {
-	//if t is essential then we must ensure that t's label is preserved
-	if(realTermTuple(t))
-		return isLabelPreserving(TermOp1(t))&&isLabelPreserving(TermOp2(t));
-	if(essentialForAuth(t)==YES || essentialForSec(t)==YES)
-	{
-		computeGlobalLabel(t);
-		int pres = t->seclabel.tmp_auth >= t->seclabel.gb_auth && t->seclabel.tmp_sec >= t->seclabel.gb_sec;
-		if(!pres) return 0;
-	}
-	if(realTermEncrypt(t))
-	{
-		return isLabelPreserving(TermOp(t));
-	}
-	return 1;
+  //if t is essential then we must ensure that t's label is preserved
+  if (realTermTuple (t))
+    return isLabelPreserving (TermOp1 (t)) && isLabelPreserving (TermOp2 (t));
+  if (essentialForAuth (t) == YES || essentialForSec (t) == YES)
+    {
+      //computeGlobalLabel(t);
+      int pres = (t->seclabel.tmp_auth >= t->seclabel.org_auth
+		  || t->seclabel.tmp_auth >= t->seclabel.prot_auth)
+	&& (t->seclabel.tmp_sec >= t->seclabel.org_sec
+	    || t->seclabel.tmp_sec >= t->seclabel.prot_sec);
+      if (!pres)
+	return 0;
+    }
+  if (realTermEncrypt (t))
+    {
+      return isLabelPreserving (TermOp (t));
+    }
+  return 1;
 }
 
 
-int checkLabelPreservation(Term t, int seclabel, int authlabel, int access)
+int
+checkLabelPreservation (Term t, int seclabel, int authlabel, int access)
 {
-	labelInit(t,tmpLabelInit);
-	computeTmpLabel(t,seclabel, authlabel,access);
-	return isLabelPreserving(t);
+  labelInit (t, tmpLabelInit);
+  computeTmpLabel (t, seclabel, authlabel, access);
+  return isLabelPreserving (t);
 }
+
 /*
 void labelingSessionKey(Term t)
 {
@@ -693,41 +773,44 @@ void labelingSessionKeys()
 		}
 }
 */
-void extractComposedTerms()
+void
+extractComposedTerms ()
 {
-	Role r;
-	Roledef rd;
-	//Protocol p;
-	/*
-	for(p=sys->protocols;p!=NULL;p=p->next)
-		if(isHelperProtocol(p))
-		{
-			for(r = p->roles; r!=NULL;r=r->next)
-				for(rd = r->roledef;rd!=NULL;rd=rd->next)
-					getOracleComposedType(rd->message);
-		}
-	*/
-	for(r = main_prot->roles; r!=NULL;r=r->next)
-		for(rd = r->roledef;rd!=NULL;rd=rd->next)
-		{
-			if(rd->type!=CLAIM)
-				getTopComposed(rd->message);
-		}
+  Role r;
+  Roledef rd;
+  //Protocol p;
+  /*
+     for(p=sys->protocols;p!=NULL;p=p->next)
+     if(isHelperProtocol(p))
+     {
+     for(r = p->roles; r!=NULL;r=r->next)
+     for(rd = r->roledef;rd!=NULL;rd=rd->next)
+     getOracleComposedType(rd->message);
+     }
+   */
+  for (r = main_prot->roles; r != NULL; r = r->next)
+    for (rd = r->roledef; rd != NULL; rd = rd->next)
+      {
+	if (rd->type != CLAIM)
+	  getTopComposed (rd->message);
+      }
 }
 
-void labelInitForMessages()
+void
+labelInitForMessages ()
 {
-	Role r;
-	Roledef rd;
-	for(r = main_prot->roles; r!=NULL;r=r->next)
-	{
-		for(rd = r->roledef;rd!=NULL;rd=rd->next)
-			if(rd->type!=CLAIM)
-			{
-				labelInit(rd->message,leafLabelInit);
-			}
-	}
+  Role r;
+  Roledef rd;
+  for (r = main_prot->roles; r != NULL; r = r->next)
+    {
+      for (rd = r->roledef; rd != NULL; rd = rd->next)
+	if (rd->type != CLAIM)
+	  {
+	    labelInit (rd->message, leafLabelInit);
+	  }
+    }
 }
+
 /*
 void assignSecToSubterm(Term t)
 {
@@ -759,98 +842,105 @@ void assignAuthToSubterm(Term t)
 	}
 }
 */
-void labelingMessages()
+void
+labelingMessages ()
 {
-	Role r;
-	Roledef rd;
-	Termlist basicHead =sys->know->basic;
-	Termlist varsHead = sys->know->vars;
-	Termlist encHead = sys->know->encrypt;
-	for(r = main_prot->roles; r!=NULL;r=r->next)
+  Role r;
+  Roledef rd;
+  Termlist basicHead = sys->know->basic;
+  Termlist varsHead = sys->know->vars;
+  Termlist encHead = sys->know->encrypt;
+  for (r = main_prot->roles; r != NULL; r = r->next)
+    {
+      addAgentVariables (sys->know, r->variables);
+      for (rd = r->roledef; rd != NULL; rd = rd->next)
 	{
-		addAgentVariables(sys->know,r->variables);
-		for(rd = r->roledef;rd!=NULL;rd=rd->next)
-		{
-			if(rd->type!=CLAIM)
-			{
-				computeProtLabel(rd->message, NOSEC, NOAUTH, ACCESSIBLE);
-			}
-		}
-		recoverIK(sys->know,basicHead, varsHead,encHead);
+	  if (rd->type != CLAIM)
+	    {
+	      computeProtLabel (rd->message, NOSEC, NOAUTH, ACCESSIBLE);
+	    }
 	}
-	// take the property into account
-	/*
-	Termlist tl ;
-	for(tl=secret; tl!=NULL; tl=tl->next)
-	{
-		assignSecToSubterm(tl->term);
-	}
-	for(tl=auth; tl!=NULL; tl=tl->next)
-	{
-		assignAuthToSubterm(tl->term);
-	}
-	*/
-	termlistDelete(labeledterm);
+      recoverIK (sys->know, basicHead, varsHead, encHead);
+    }
+  // take the property into account
+  /*
+     Termlist tl ;
+     for(tl=secret; tl!=NULL; tl=tl->next)
+     {
+     assignSecToSubterm(tl->term);
+     }
+     for(tl=auth; tl!=NULL; tl=tl->next)
+     {
+     assignAuthToSubterm(tl->term);
+     }
+   */
+  termlistDelete (labeledterm);
 }
 
 
-void processProperties()
+void
+processProperties ()
 {
-	Role r = main_prot->roles;
-	//authProp=0;
-	List comm=NULL;
-	List runn=NULL;
-	while(r!=NULL)
+  Role r = main_prot->roles;
+  //authProp=0;
+  List comm = NULL;
+  List runn = NULL;
+  while (r != NULL)
+    {
+      term = r->nameterm;
+      Roledef rd = r->roledef;
+      while (rd != NULL)
 	{
-		term = r->nameterm;
-		Roledef rd = r->roledef;
-		while(rd!=NULL)
-		{
-			if(rd->type==CLAIM)
-			{
-				Claimlist cl = rd->claiminfo;
-				//if(isAuthStrongClaim(cl))
-				//	authProp=1;
-				//else
-				{
-					//authProp=-1;
-					if(isRunningEvent(cl))
-					{
-						runn = list_add(runn, rd);
-					}
-					else if(isCommitEvent(cl))
-					{
-						//auth = termlistAdd(auth, rd->message);
-						//authav = extractAV(authav,rd->message,0);
-						comm = list_add(comm,rd);
-					}
-				}
-			}
-			rd= rd->next;
-		}
-		r = r->next;
+	  if (rd->type == CLAIM)
+	    {
+	      Claimlist cl = rd->claiminfo;
+	      //if(isAuthStrongClaim(cl))
+	      //      authProp=1;
+	      //else
+	      {
+		//authProp=-1;
+		if (isRunningEvent (cl))
+		  {
+		    runn = list_add (runn, rd);
+		  }
+		else if (isCommitEvent (cl))
+		  {
+		    //auth = termlistAdd(auth, rd->message);
+		    //authav = extractAV(authav,rd->message,0);
+		    comm = list_add (comm, rd);
+		  }
+	      }
+	    }
+	  rd = rd->next;
 	}
-	extractAuthTermFromSignals(runn,comm);
+      r = r->next;
+    }
+  extractAuthTermFromSignals (runn, comm);
 }
 
-void labeling()
+void
+labeling ()
 {
-	labelInitForMessages();
-	labelingMessages();
-	//labelingSessionKeys();
+  labelInitForMessages ();
+  labelingMessages ();
+  //labelingSessionKeys();
 }
 
-void protocolAnalysis()
+void
+protocolAnalysis ()
 {
-	labeling();
-	extractComposedTerms();
-	processProperties();
+  labeling ();
+  extractComposedTerms ();
+  processProperties ();
 }
-void initialAnalysis()
+
+void
+initialAnalysis ()
 {
-	setMainProtocol();
-	protocolAnalysis();
+  setMainProtocol ();
+  protocolAnalysis ();
 }
+
 /*
 int secrecyNotRequired(Term t)
 {
@@ -869,20 +959,21 @@ int secrecyNotRequired(Term t)
 	return 0;
 }
 */
-int isAuthProvider(Term t)
+int
+isAuthProvider (Term t)
 {
-	if(realTermEncrypt(t))
-	{
-		//int authSubt = isSomeTermlistSubterm(t,auth);
-		//if(!authSubt) return 0;
+  if (realTermEncrypt (t))
+    {
+      //int authSubt = isSomeTermlistSubterm(t,auth);
+      //if(!authSubt) return 0;
 
-		if(t->helper.fcall)
-		{
-			return containLTSharedKeyInPlain(TermOp(t))!=NULL; //authentication provided by a MAC
-		}
-		return isPrivateKey(TermKey(t)); //authentication provided by signatures
+      if (t->helper.fcall)
+	{
+	  return containLTSharedKeyInPlain (TermOp (t)) != NULL;	//authentication provided by a MAC
 	}
-	return 0;
+      return isPrivateKey (TermKey (t));	//authentication provided by signatures
+    }
+  return 0;
 }
 
 //compute global label (note that protocol labels have been previously computed)
@@ -922,88 +1013,107 @@ void computeGlobalLabel(Term t)
 }
 */
 
-Termlist removePatternRedundancy(Termlist tl)
+Termlist
+removePatternRedundancy (Termlist tl)
 {
-	if(tl==NULL) return NULL;
-	Termlist basicHead =sys->know->basic;
-	Termlist varsHead = sys->know->vars;
-	Termlist encHead = sys->know->encrypt;
+  if (tl == NULL)
+    return NULL;
+  Termlist basicHead = sys->know->basic;
+  Termlist varsHead = sys->know->vars;
+  Termlist encHead = sys->know->encrypt;
 
-	Termlist temp = tl;
-	while(temp!=NULL){
-		//add all preceding elements
-		Termlist p = temp->prev;
-		while(p!=NULL){
-			addTermToIK(sys->know,p->term->subst);
-			p=p->prev;
-		}
-		p = temp->next;
-		while(p!=NULL){
-			addTermToIK(sys->know,p->term->subst);
-			p=p->next;
-		}
-		int isRedundant = inKnowledge(sys->know,temp->term->subst);
-		//recover initial knowledge
-		recoverIK(sys->know,basicHead, varsHead,encHead);
-		//check the result
-		if(isRedundant){
-			Termlist next = temp->next;
-			if(temp->prev!=NULL) temp->prev->next = temp->next;
-			if(temp->next!=NULL) temp->next->prev = temp->prev;
-			tl=termlistDelTerm(temp);
-			temp=next;
-			if(temp==NULL) break;
-			else continue;
-		}
-		temp=temp->next;
+  Termlist temp = tl;
+  while (temp != NULL)
+    {
+      //add all preceding elements
+      Termlist p = temp->prev;
+      while (p != NULL)
+	{
+	  addTermToIK (sys->know, p->term->subst);
+	  p = p->prev;
 	}
-	return tl;
+      p = temp->next;
+      while (p != NULL)
+	{
+	  addTermToIK (sys->know, p->term->subst);
+	  p = p->next;
+	}
+      int isRedundant = inKnowledge (sys->know, temp->term->subst);
+      //recover initial knowledge
+      recoverIK (sys->know, basicHead, varsHead, encHead);
+      //check the result
+      if (isRedundant)
+	{
+	  Termlist next = temp->next;
+	  if (temp->prev != NULL)
+	    temp->prev->next = temp->next;
+	  if (temp->next != NULL)
+	    temp->next->prev = temp->prev;
+	  tl = termlistDelTerm (temp);
+	  temp = next;
+	  if (temp == NULL)
+	    break;
+	  else
+	    continue;
+	}
+      temp = temp->next;
+    }
+  return tl;
 }
 
-int getAuthFromCrypto(struct cryptstr crypto)
+int
+getAuthFromCrypto (struct cryptstr crypto)
 {
-	if(crypto.type==MAC||crypto.type==SIG||crypto.type==LTSYM||crypto.type==KEYPOS)
-		return AUTH;
-	else return NOAUTH;
+  if (crypto.type == MAC || crypto.type == SIG || crypto.type == LTSYM
+      || crypto.type == KEYPOS)
+    return AUTH;
+  else
+    return NOAUTH;
 }
 
-int getSecFromCrypto(struct cryptstr crypto)
+int
+getSecFromCrypto (struct cryptstr crypto)
 {
-	if(crypto.type==HASH||crypto.type==MAC||crypto.type==LTSYM||crypto.type==PK||crypto.type==KEYPOS)
-		return SEC;
-	else return NOSEC;
+  if (crypto.type == HASH || crypto.type == MAC || crypto.type == LTSYM
+      || crypto.type == PK || crypto.type == KEYPOS)
+    return SEC;
+  else
+    return NOSEC;
 }
 
-int isMoreSecure(int a1,int s1, int a2,int s2)
+int
+isMoreSecure (int a1, int s1, int a2, int s2)
 {
-	return (a2>=a1&&s2>=s1);
+  return (a2 >= a1 && s2 >= s1);
 }
 
 
 
 //check if a term's type fall into the comp type list. Note that t's type is either encryption or hash
-Term typeOverlapped(Term t)
+Term
+typeOverlapped (Term t)
 {
-	if(t==NULL) return NULL;
-	if(realTermLeaf(t))
-			return NULL;
-	Term type = getTermType(t);
-	Termlist tl = forbidden;
-	while(tl!=NULL)
-	{
+  if (t == NULL)
+    return NULL;
+  if (realTermLeaf (t))
+    return NULL;
+  Term type = getTermType (t);
+  Termlist tl = forbidden;
+  while (tl != NULL)
+    {
 
-		if(!isComparable(tl->term->originType,term)) //only consider terms whose types are originally disjoint
-		{
-			Term type1 = getTermType(tl->term);
-			if(isComparable(type,type1))
-			//if(isSubtype(type,tl->term)||isSubtype(tl->term,type))
-			{
-				return type1;
-			}
-		}
-		tl = tl->next;
+      if (!isComparable (tl->term->originType, term))	//only consider terms whose types are originally disjoint
+	{
+	  Term type1 = getTermType (tl->term);
+	  if (isComparable (type, type1))
+	    //if(isSubtype(type,tl->term)||isSubtype(tl->term,type))
+	    {
+	      return type1;
+	    }
 	}
-	return NULL;
+      tl = tl->next;
+    }
+  return NULL;
 }
 
 //return true if there is a list of terms whose non-composed subterms with bounded depth cover those in av
@@ -1049,34 +1159,38 @@ int termlistAVCovered(Termlist av, Termlist tl, int dep, int size)
 }
 
 */
-int isReplicated(Termlist tl)
+int
+isReplicated (Termlist tl)
 {
-	Termlist tmp;
-	for(tmp=tl->prev;tmp!=NULL;tmp=tmp->prev)
-		if(isTermEqual(tl->term,tmp->term)) return 1;
-	for(tmp=tl->next;tmp!=NULL;tmp=tmp->next)
-		if(isTermEqual(tl->term,tmp->term)) return 1;
-	return 0;
+  Termlist tmp;
+  for (tmp = tl->prev; tmp != NULL; tmp = tmp->prev)
+    if (isTermEqual (tl->term, tmp->term))
+      return 1;
+  for (tmp = tl->next; tmp != NULL; tmp = tmp->next)
+    if (isTermEqual (tl->term, tmp->term))
+      return 1;
+  return 0;
 }
 
 
-int removeReplicateInHash(Termlist *keep)
+int
+removeReplicateInHash (Termlist * keep)
 {
-	Termlist tl = *keep;
-	int removed=false;
-	while(tl!=NULL)
+  Termlist tl = *keep;
+  int removed = false;
+  while (tl != NULL)
+    {
+      if (isReplicated (tl))
 	{
-		if(isReplicated(tl))
-		{
-			Termlist tmp = tl->next;
-			*keep = termlistDelTerm(tl);
-			tl=tmp;
-			removed=true;
-			continue;
-		}
-		tl=tl->next;
+	  Termlist tmp = tl->next;
+	  *keep = termlistDelTerm (tl);
+	  tl = tmp;
+	  removed = true;
+	  continue;
 	}
-	return removed;
+      tl = tl->next;
+    }
+  return removed;
 }
 
 /*
@@ -1109,54 +1223,56 @@ int removeRedundancyInHash(Termlist *keep)
 */
 //we have to be sure that an unexpected function symbol should not pop-up
 //this is due to the exclusiveness of the syntactic criterion
-void UnexpectedFuncSymbForHash(Termlist *keep, Termlist *pull)
+void
+UnexpectedFuncSymbForHash (Termlist * keep, Termlist * pull)
 {
-	if(hasTuple&&*pull!=NULL)
+  if (hasTuple && *pull != NULL)
+    {
+      if (*keep != NULL || (*pull)->next != NULL)
 	{
-		if(*keep!=NULL||(*pull)->next!=NULL)
-		{
-			*keep = termlistConcat(*keep,*pull);
-			*pull=NULL;
-		}
+	  *keep = termlistConcat (*keep, *pull);
+	  *pull = NULL;
 	}
-	if(*keep==NULL&&*pull!=NULL&&(*pull)->next==NULL)
+    }
+  if (*keep == NULL && *pull != NULL && (*pull)->next == NULL)
+    {
+      Term term = (*pull)->term->subst;
+      if (realTermEncrypt (term))
 	{
-		Term term = (*pull)->term->subst;
-		if(realTermEncrypt(term))
-		{
-			if(!term->helper.fcall||inTermlist(topconst, TermKey(term)))
-			{
-				*keep = termlistAdd(*keep,(*pull)->term);
-				free(*pull);
-				*pull=NULL;
-			}
-		}
+	  if (!term->helper.fcall || inTermlist (topconst, TermKey (term)))
+	    {
+	      *keep = termlistAdd (*keep, (*pull)->term);
+	      free (*pull);
+	      *pull = NULL;
+	    }
 	}
+    }
 }
 
-void UnexpectedFuncSymbForEnc(Termlist *keep, Termlist *pull)
+void
+UnexpectedFuncSymbForEnc (Termlist * keep, Termlist * pull)
 {
-	if(hasTuple&&*pull!=NULL)
+  if (hasTuple && *pull != NULL)
+    {
+      if (*keep != NULL || (*pull)->next != NULL)
 	{
-		if(*keep!=NULL||(*pull)->next!=NULL)
-		{
-			*keep = termlistConcat(*keep,*pull);
-			*pull=NULL;
-		}
+	  *keep = termlistConcat (*keep, *pull);
+	  *pull = NULL;
 	}
-	if(*keep==NULL&&*pull!=NULL&&(*pull)->next==NULL)
+    }
+  if (*keep == NULL && *pull != NULL && (*pull)->next == NULL)
+    {
+      Term term = (*pull)->term->subst;
+      if (realTermEncrypt (term))
 	{
-		Term term = (*pull)->term->subst;
-		if(realTermEncrypt(term))
-		{
-			if(term->helper.fcall&&inTermlist(topconst, TermKey(term)))
-			{
-				*keep = termlistAdd(*keep,(*pull)->term);
-				free(*pull);
-				*pull=NULL;
-			}
-		}
+	  if (term->helper.fcall && inTermlist (topconst, TermKey (term)))
+	    {
+	      *keep = termlistAdd (*keep, (*pull)->term);
+	      free (*pull);
+	      *pull = NULL;
+	    }
 	}
+    }
 }
 
 /*
@@ -1167,41 +1283,49 @@ int notSecureByOracle(Term type)
 */
 //check if t occurs in some tuple whose depth is greater than the term's depth
 
-int secondOccurrenceInTuple(Term bigterm, int depth)
+int
+secondOccurrenceInTuple (Term bigterm, int depth)
 {
-	if(depth>currdepth||isComparable(getTermType(bigterm), smalltype)) return 0;
-	if(isTermEqual(smallterm, bigterm)) return 1;
-	if(realTermEncrypt(bigterm))
-	{
-		int found = secondOccurrenceInTuple(TermOp(bigterm), depth+1);
-		if(found) return 1;
-		else if(!bigterm->helper.fcall)
-			return secondOccurrenceInTuple(TermKey(bigterm), depth+1);
-	}
-	if(realTermTuple(bigterm))
-		return secondOccurrenceInTuple(TermOp1(bigterm), depth)||
-				secondOccurrenceInTuple(TermOp2(bigterm), depth);
-	return 0;
+  if (depth > currdepth || isComparable (getTermType (bigterm), smalltype))
+    return 0;
+  if (isTermEqual (smallterm, bigterm))
+    return 1;
+  if (realTermEncrypt (bigterm))
+    {
+      int found = secondOccurrenceInTuple (TermOp (bigterm), depth + 1);
+      if (found)
+	return 1;
+      else if (!bigterm->helper.fcall)
+	return secondOccurrenceInTuple (TermKey (bigterm), depth + 1);
+    }
+  if (realTermTuple (bigterm))
+    return secondOccurrenceInTuple (TermOp1 (bigterm), depth) ||
+      secondOccurrenceInTuple (TermOp2 (bigterm), depth);
+  return 0;
 }
 
-Termlist removePatVar(Termlist tmp,Termlist *keep)
+Termlist
+removePatVar (Termlist tmp, Termlist * keep)
 {
-	Termlist removed = tmp;
-	if(tmp==*keep)
-	{
-		*keep = tmp->next;
-		if(*keep) (*keep)->prev=NULL;
-	}
-	else
-	{
-		tmp->prev->next = tmp->next;
-		if(tmp->next) tmp->next->prev=tmp->prev;
-	}
-	tmp=tmp->next;
-	free(removed);
-	return tmp;
+  Termlist removed = tmp;
+  if (tmp == *keep)
+    {
+      *keep = tmp->next;
+      if (*keep)
+	(*keep)->prev = NULL;
+    }
+  else
+    {
+      tmp->prev->next = tmp->next;
+      if (tmp->next)
+	tmp->next->prev = tmp->prev;
+    }
+  tmp = tmp->next;
+  free (removed);
+  return tmp;
 }
 
+/*
 int composedTermSecure(Termlist pt)
 {
 	Termlist tl;
@@ -1215,221 +1339,291 @@ int composedTermSecure(Termlist pt)
 	}
 	return 0;
 }
+*/
 
-Term createTmpTerm(int isHash, Termlist pull, Termlist keep, Term k)
+Term
+createTmpTerm (int isHash, Termlist pull, Termlist keep, Term k)
 {
-	Term op = createTermFromPatList(keep);
-	Term u = createTermFromPatList(pull);
-	Term tmp;
-	if(op==NULL) tmp =NULL;
-	else
+  Term op = createTermFromPatList (keep);
+  Term u = createTermFromPatList (pull);
+  Term tmp;
+  if (op == NULL)
+    tmp = NULL;
+  else
+    {
+      if (isHash)
 	{
-		if(isHash)
-		{
-			tmp = makeTermEncrypt(op,k);
-			tmp->helper.fcall = true;
-		}
-		else
-		{
-			tmp = makeTermEncrypt(op,termDuplicate(k));
-		}
+	  tmp = makeTermEncrypt (op, k);
+	  tmp->helper.fcall = true;
 	}
-	return makeTermTuple(u,tmp);
+      else
+	{
+	  tmp = makeTermEncrypt (op, termDuplicate (k));
+	}
+    }
+  return makeTermTuple (u, tmp);
 }
 
 //check if t contain essential term
-int containEssentialTerm(Term t)
+int
+containEssentialTerm (Term t)
 {
-	if(t->e_contain==UNKNOWN)
+  if (t->e_contain == UNKNOWN)
+    {
+      if (essentialForAuth (t) == YES || essentialForSec (t) == YES)
 	{
-		if(essentialForAuth(t)==YES||essentialForSec(t)==YES)
-		{
-			t->e_contain=YES;
-		}
-		else if(realTermEncrypt(t))
-		{
-			//if(t->helper.fcall==true)
-			t->e_contain= containEssentialTerm(TermOp(t));
-			//t->e_contain= containEssentialTerm(TermOp(t))||containEssentialTerm(TermKey(t));
-		}
-		else if(realTermTuple(t))
-		{
-			t->e_contain= containEssentialTerm(TermOp1(t))||containEssentialTerm(TermOp2(t));
-		}
+	  t->e_contain = YES;
 	}
-	return t->e_contain;
+      else if (realTermEncrypt (t))
+	{
+	  //if(t->helper.fcall==true)
+	  t->e_contain = containEssentialTerm (TermOp (t));
+	  //t->e_contain= containEssentialTerm(TermOp(t))||containEssentialTerm(TermKey(t));
+	}
+      else if (realTermTuple (t))
+	{
+	  t->e_contain = containEssentialTerm (TermOp1 (t))
+	    || containEssentialTerm (TermOp2 (t));
+	}
+    }
+  return t->e_contain;
 }
+
+int
+isEssentialTerm (Term t)
+{
+  return t->e_auth == YES || t->e_sec == YES;
+}
+
+//check if a term contains an essential term that does not occur as subterm of terms in a termlist
+int
+notContainEssentialTermlist (Term t, Termlist tl)
+{
+  if (realTermLeaf (t))
+    {
+      if (isEssentialTerm (t))
+	{
+	  Termlist tmp = tl;
+	  while (tmp != NULL)
+	    {
+	      if (isSubterm (t, tmp->term->subst))
+		break;
+	      tmp = tmp->next;
+	    }
+	  if (tmp == NULL)
+	    return 1;
+	}
+      return 0;
+    }
+  else if (realTermEncrypt (t))
+    {
+      if (t->helper.fcall)
+	return notContainEssentialTermlist (TermOp (t), tl);
+      else
+	return notContainEssentialTermlist (TermOp (t), tl)
+	  || notContainEssentialTermlist (TermKey (t), tl);
+    }
+  else
+    return notContainEssentialTermlist (TermOp1 (t), tl)
+      || notContainEssentialTermlist (TermOp2 (t), tl);
+}
+
 //handle hashes
-int buildPatternForHash(int secretOverlap, Termlist *pull, Termlist *keep, int sec_outer, int auth_outer, Term hashfunc)
+int
+buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
+		     int sec_outer, int auth_outer, int sec_inner,
+		     int auth_inner, Term hashfunc)
 {
-	Termlist tmp = *keep;
-	int eqtype=SYSTEM_TRIVIAL;
-	while(tmp!=NULL)
+  Termlist tmp = *keep;
+  int eqtype = SYSTEM_TRIVIAL;
+  while (tmp != NULL)
+    {
+      Term t = tmp->term->subst;
+      //try to remove
+      Term ttmp;
+      Termlist newpull, newkeep;
+      Termlist prev = tmp->prev;
+      int isSafe;
+      newpull = *pull;
+      if (prev == NULL)
+	newkeep = tmp->next;
+      else
 	{
-		Term t = tmp->term->subst;
-		//try to remove
-		Term ttmp;
-		Termlist newpull, newkeep;
-		Termlist prev = tmp->prev;
-		int isSafe;
-		newpull=*pull;
-		if(prev==NULL)
-			newkeep = tmp->next;
-		else
-		{
-			prev->next = tmp->next;
-			newkeep = *keep;
-		}
-		ttmp= createTmpTerm(1, newpull, newkeep,hashfunc);
-		//eprintf("check for removing:");
-		//printTerm(ttmp);
-		//eprintf("\n");
-		//but we only remove t if t needs not be secure or there is another occurrence of t in the outer constructor
-		//and we do not remove the hash completely
-		int not_complete_removal = newkeep!=NULL||newpull!=NULL;
-		smallterm = t;
-		smalltype = getTermType(parentTerm);
-		int secondOccurrence = secondOccurrenceInTuple(bigterm,0);
-		int need_not_secure = !containEssentialTerm(t);
-			isSafe = (secondOccurrence||need_not_secure)&&not_complete_removal&&checkLabelPreservation(ttmp,sec_outer,auth_outer,ACCESSIBLE);
-		termDelete(ttmp);
-		if(isSafe)
-		{
-			if(prev!=NULL)
-				prev->next=tmp;
-			eqtype=SYSTEM_REMOVE_FIELD;
-			tmp=removePatVar(tmp,keep);
-			continue;
-		}
-		//try to pull it out
-		else if(!secretOverlap)
-		{
-			newpull = makeTermlist();
-			newpull->term = tmp->term;
-			newpull->next = *pull;
-			computeGlobalLabel(t);
-			Term ttmp = createTmpTerm(1, newpull, newkeep,hashfunc);
-			if(prev!=NULL)
-				prev->next=tmp;
-			//eprintf("check for pulling:");
-			//printTerm(ttmp);
-			//eprintf("\n");
-				isSafe = checkLabelPreservation(ttmp,sec_outer,auth_outer,ACCESSIBLE);
-			termDelete(ttmp);
-			free(newpull);
-			newpull=NULL;
-			//int need_not_secure = t->seclabel.gb_auth == NOAUTH && t->seclabel.gb_sec==NOSEC;
-			if(isSafe)//&&(need_not_secure||secureOracle||composedTermSecure(newkeep)))
-			{
-				//if(outercrypto.type!=NONE||typeOverlapped(t)==NULL)
-				if(typeOverlapped(t)==NULL)
-				{
-					*pull = termlistAdd(*pull,tmp->term);
-					if(eqtype!=SYSTEM_REMOVE_FIELD) eqtype=SYSTEM_PULL_OUT;
-					tmp=removePatVar(tmp,keep);
-					continue;
-				}
-			}
-		}
-		else if(prev!=NULL)
-			prev->next = tmp;
-		tmp = tmp->next;
+	  prev->next = tmp->next;
+	  newkeep = *keep;
 	}
-	//check if some term in hash could be removed
-	/*
-	if(removeRedundancyInHash(keep))
-		eqtype=SYSTEM_REMOVE_FIELD;
-	*/
-	if(removeReplicateInHash(keep))
-		eqtype=SYSTEM_REMOVE_FIELD;
+      ttmp = createTmpTerm (1, newpull, newkeep, hashfunc);
+      //eprintf("check for removing:");
+      //printTerm(ttmp);
+      //eprintf("\n");
+      //but we only remove t if t needs not be secure or there is another occurrence of t in the outer constructor
+      //and we do not remove the hash completely
+      int not_complete_removal = newkeep != NULL || newpull != NULL;
+      smallterm = t;
+      smalltype = getTermType (parentTerm);
+      int secondOccurrence = secondOccurrenceInTuple (bigterm, 0);
+      int need_not_secure = !isLTKey (t) && !containEssentialTerm (t);
+      isSafe = not_complete_removal && (secondOccurrence || need_not_secure ||
+					(!notContainEssentialTermlist
+					 (t, newkeep)
+					 && checkLabelPreservation (ttmp,
+								    sec_outer,
+								    auth_outer,
+								    ACCESSIBLE)));
+      termDelete (ttmp);
+      if (isSafe)
+	{
+	  if (prev != NULL)
+	    prev->next = tmp;
+	  eqtype = SYSTEM_REMOVE_FIELD;
+	  tmp = removePatVar (tmp, keep);
+	  continue;
+	}
+      //try to pull it out
+      else if (!secretOverlap)
+	{
+	  newpull = makeTermlist ();
+	  newpull->term = tmp->term;
+	  newpull->next = *pull;
+	  //computeGlobalLabel(t);
+	  Term ttmp = createTmpTerm (1, newpull, newkeep, hashfunc);
+	  if (prev != NULL)
+	    prev->next = tmp;
+	  //eprintf("check for pulling:");
+	  //printTerm(ttmp);
+	  //eprintf("\n");
+	  isSafe = (sec_outer >= sec_inner && auth_outer >= auth_inner)
+	    || checkLabelPreservation (ttmp, sec_outer, auth_outer,
+				       ACCESSIBLE);
+	  termDelete (ttmp);
+	  free (newpull);
+	  newpull = NULL;
+	  //int need_not_secure = t->seclabel.gb_auth == NOAUTH && t->seclabel.gb_sec==NOSEC;
+	  if (isSafe)		//&&(need_not_secure||secureOracle||composedTermSecure(newkeep)))
+	    {
+	      //if(outercrypto.type!=NONE||typeOverlapped(t)==NULL)
+	      if (typeOverlapped (t) == NULL)
+		{
+		  *pull = termlistAdd (*pull, tmp->term);
+		  if (eqtype != SYSTEM_REMOVE_FIELD)
+		    eqtype = SYSTEM_PULL_OUT;
+		  tmp = removePatVar (tmp, keep);
+		  continue;
+		}
+	    }
+	}
+      else if (prev != NULL)
+	prev->next = tmp;
+      tmp = tmp->next;
+    }
+  //check if some term in hash could be removed
+  /*
+     if(removeRedundancyInHash(keep))
+     eqtype=SYSTEM_REMOVE_FIELD;
+   */
+  if (removeReplicateInHash (keep))
+    eqtype = SYSTEM_REMOVE_FIELD;
 
-	UnexpectedFuncSymbForHash(keep,pull);
+  UnexpectedFuncSymbForHash (keep, pull);
 
-	return eqtype;
+  return eqtype;
 }
 
-int isSubtermInPat(Termlist tl)
+int
+isSubtermInPat (Termlist tl)
 {
-	Term t = tl->term->subst;
-	Termlist tmp = tl->prev;
-	while(tmp!=NULL)
-	{
-		if(isSubterm(t,tmp->term->subst)) return 1;
-		tmp = tmp->prev;
-	}
-	tmp = tl->next;
-	while(tmp!=NULL)
-	{
-		if(isSubterm(t,tmp->term->subst)) return 1;
-		tmp = tmp->next;
-	}
+  Term t = tl->term->subst;
+  Termlist tmp = tl->prev;
+  while (tmp != NULL)
+    {
+      if (isSubterm (t, tmp->term->subst))
+	return 1;
+      tmp = tmp->prev;
+    }
+  tmp = tl->next;
+  while (tmp != NULL)
+    {
+      if (isSubterm (t, tmp->term->subst))
+	return 1;
+      tmp = tmp->next;
+    }
+  return 0;
+}
+
+int
+containOnlyAgent (Term t)
+{
+  if (realTermLeaf (t))
+    {
+      if (inTermlist (t->stype, TERM_Agent))
+	return 1;
+      return 0;
+    }
+  else if (realTermEncrypt (t))
+    {
+      int res1 = containOnlyAgent (TermOp (t));
+      if (!res1)
 	return 0;
-}
-
-int containOnlyAgent(Term t)
-{
-	if(realTermLeaf(t))
-	{
-		if(inTermlist(t->stype,TERM_Agent)) return 1;
-		return 0;
-	}
-	else if(realTermEncrypt(t))
-	{
-		int res1 = containOnlyAgent(TermOp(t));
-		if(!res1) return 0;
-		if(t->helper.fcall) return inTermlist(sys->know->basic, TermKey(t));
-		else return containOnlyAgent(TermKey(t));
-	}
-	else return containOnlyAgent(TermOp1(t))&&containOnlyAgent(TermOp2(t));
+      if (t->helper.fcall)
+	return inTermlist (sys->know->basic, TermKey (t));
+      else
+	return containOnlyAgent (TermKey (t));
+    }
+  else
+    return containOnlyAgent (TermOp1 (t)) && containOnlyAgent (TermOp2 (t));
 }
 
 // pull out agent names if they already occur somewhere else in the plaintext
-void pull_out_agent(Termlist *keep, Termlist *pull)
+void
+pull_out_agent (Termlist * keep, Termlist * pull)
 {
-	Termlist tl = *keep;
-	while(tl!=NULL)
+  Termlist tl = *keep;
+  while (tl != NULL)
+    {
+      if (containOnlyAgent (tl->term->subst))
 	{
-		if(containOnlyAgent(tl->term->subst))
+	  Termlist ag = extractAV (NULL, tl->term->subst, 1);
+	  int found = false;
+	  Termlist tmp;
+	  for (tmp = tl->prev; tmp != NULL; tmp = tmp->prev)
+	    if (isTermlistSubterm (tmp->term->subst, ag))
+	      {
+		found = true;
+		break;
+	      }
+	  if (!found)
+	    for (tmp = tl->next; tmp != NULL; tmp = tmp->next)
+	      if (isTermlistSubterm (tmp->term->subst, ag))
 		{
-			Termlist ag = extractAV(NULL,tl->term->subst,1);
-			int found = false;
-			Termlist tmp;
-			for(tmp=tl->prev; tmp!=NULL; tmp=tmp->prev)
-				if(isTermlistSubterm(tmp->term->subst,ag))
-				{
-					found=true;
-					break;
-				}
-			if(!found)
-				for(tmp=tl->next; tmp!=NULL; tmp=tmp->next)
-					if(isTermlistSubterm(tmp->term->subst,ag))
-					{
-						found=true;
-						break;
-					}
-			termlistDelete(ag);
-			if(found)
-			{
-				*pull = termlistAdd(*pull,tl->term);
-				tmp = tl;
-				if(tl==*keep)
-				{
-					*keep = tl->next;
-					if(*keep) (*keep)->prev=NULL;
-				}
-				else
-				{
-					tl->prev->next = tl->next;
-					if(tl->next) tl->next->prev=tl->prev;
-				}
-				tl=tl->next;
-				free(tmp);
-				continue;
-			}
+		  found = true;
+		  break;
 		}
-		tl=tl->next;
+	  termlistDelete (ag);
+	  if (found)
+	    {
+	      *pull = termlistAdd (*pull, tl->term);
+	      tmp = tl;
+	      if (tl == *keep)
+		{
+		  *keep = tl->next;
+		  if (*keep)
+		    (*keep)->prev = NULL;
+		}
+	      else
+		{
+		  tl->prev->next = tl->next;
+		  if (tl->next)
+		    tl->next->prev = tl->prev;
+		}
+	      tl = tl->next;
+	      free (tmp);
+	      continue;
+	    }
 	}
+      tl = tl->next;
+    }
 }
+
 /*
 int containOnlyAgentInPatList(Termlist tl)
 {
@@ -1440,397 +1634,437 @@ int containOnlyAgentInPatList(Termlist tl)
 }
 */
 //check if the session-key is weaker than the protection provided by term t
-int sessionKeyWeaker(Term t, Term key)
+int
+sessionKeyWeaker (Term t, Term key)
 {
-	if(realTermLeaf(t)) return 0;
-	if(realTermEncrypt(t))
+  if (realTermLeaf (t))
+    return 0;
+  if (realTermEncrypt (t))
+    {
+      //check if t contains all information of key, i.e., all atoms and variables in key
+      Termlist av = extractAV (NULL, key, 0);
+      Termlist tmp;
+      for (tmp = av; tmp != NULL; tmp = tmp->next)
+	if (!isSubterm (tmp->term, t))
+	  return 0;
+      termlistDelete (av);
+      if (t->helper.fcall)
+	return 1;
+      else
 	{
-		//check if t contains all information of key, i.e., all atoms and variables in key
-		Termlist av = extractAV(NULL, key,0);
-		Termlist tmp;
-		for(tmp=av;tmp!=NULL;tmp=tmp->next)
-			if(!isSubterm(tmp->term,t)) return 0;
-		termlistDelete(av);
-		if(t->helper.fcall) return 1;
-		else
-		{
-			Term k = TermKey(t);
-			if(isPublicKey(k)||isLTSharedKey(k)) return 1;
-			if(isPrivateKey(k)) return 0;
-			return isTermEqual(key,k);
-		}
+	  Term k = TermKey (t);
+	  if (isPublicKey (k) || isLTSharedKey (k))
+	    return 1;
+	  if (isPrivateKey (k))
+	    return 0;
+	  return isTermEqual (key, k);
 	}
-	return 0;
+    }
+  return 0;
 }
 
 //check if some term required to be authenticated occurs in plaintext of some term in a termlist (pattern)
-int authenticTermInPlaintext(Termlist tl1, Termlist tl2)
+int
+authenticTermInPlaintext (Termlist tl1, Termlist tl2)
 {
-	Termlist tmp;
-	for(tmp=tl1; tmp!=NULL; tmp=tmp->next)
-	{
-		if(plaintextAppearInTermlistPat(tmp->term,tl2)) return 1;
-	}
-	return 0;
+  Termlist tmp;
+  for (tmp = tl1; tmp != NULL; tmp = tmp->next)
+    {
+      if (plaintextAppearInTermlistPat (tmp->term, tl2))
+	return 1;
+    }
+  return 0;
 }
 
-int containSomeEssential(Termlist keep)
+int
+containSomeEssential (Termlist keep)
 {
-	Termlist tl;
-	for(tl=keep; tl!=NULL;tl=tl->next)
-	{
-		if(containEssentialTerm(tl->term->subst)) return 1;
-	}
-	return 0;
+  Termlist tl;
+  for (tl = keep; tl != NULL; tl = tl->next)
+    {
+      if (containEssentialTerm (tl->term->subst))
+	return 1;
+    }
+  return 0;
 }
 
 //check if t occurs in some other field
-int occurSomeWhere(Term t, Termlist keep)
+int
+occurSomeWhere (Term t, Termlist keep)
 {
-	Termlist tl;
-	for(tl=keep; tl!=NULL; tl= tl->next)
-	{
-		if(isSubterm(t,tl->term->subst))
-			return 1;
-	}
-	return 0;
+  Termlist tl;
+  for (tl = keep; tl != NULL; tl = tl->next)
+    {
+      if (isSubterm (t, tl->term->subst))
+	return 1;
+    }
+  return 0;
 }
 
-int getCryptoType(Term t)
+int
+getCryptoType (Term t)
 {
-	int type = NONE;
-	if(t->helper.fcall)
+  int type = NONE;
+  if (t->helper.fcall)
+    {
+      Term sharedkey = containLTSharedKeyInPlain (TermOp (t));
+      if (sharedkey != NULL)
 	{
-		Term sharedkey = containLTSharedKeyInPlain(TermOp(t));
-		if(sharedkey!=NULL)
-		{
-			type=MAC;
-		}
-		else type=HASH;
+	  type = MAC;
 	}
-	else if(realTermEncrypt(t))
+      else
+	type = HASH;
+    }
+  else if (realTermEncrypt (t))
+    {
+      Term key = TermKey (t);
+      if (isLTSharedKey (key))
 	{
-		Term key = TermKey(t);
-		if(isLTSharedKey(key))
-		{
-			type= LTSYM;
-		}
-		else if(isPublicKey(key))
-		{
-			type= PK;
-		}
-		else if(isPrivateKey(key))
-		{
-			type= SIG;
-		}
-		else type=SYM;
+	  type = LTSYM;
 	}
-	return type;
+      else if (isPublicKey (key))
+	{
+	  type = PK;
+	}
+      else if (isPrivateKey (key))
+	{
+	  type = SIG;
+	}
+      else
+	type = SYM;
+    }
+  return type;
 }
 
 //handle encryptions
-int buildPatternForEnc(int secretOverlap,Term type,Termlist *pull, Termlist *keep,
-		int sec_outer,int auth_outer, int cryptotype, Term key)
+int
+buildPatternForEnc (int secretOverlap, Term type, Termlist * pull,
+		    Termlist * keep, int sec_outer, int auth_outer,
+		    int sec_inner, int auth_inner, int cryptotype, Term key)
 {
-	//pull_out_agent(keep, pull);
-	if(!containSomeEssential(*keep))
+  //pull_out_agent(keep, pull);
+  if (!containSomeEssential (*keep))
+    {
+      *pull = *keep;
+      *keep = NULL;
+      return SYSTEM_PULL_OUT;
+    }
+  Termlist tmp = *keep;
+  while (tmp != NULL)
+    {
+      Term t = tmp->term->subst;
+      if (!secretOverlap)
 	{
-		*pull=*keep;
-		*keep=NULL;
-		return SYSTEM_PULL_OUT;
-	}
-	Termlist tmp = *keep;
-	while(tmp!=NULL)
-	{
-		Term t = tmp->term->subst;
-		if(!secretOverlap)
+	  //computeGlobalLabel(t);
+	  tmp->term->abst = 1;
+	  //check if the key is useful to protect the term
+	  //int good_key=cryptotype!=SYM||!sessionKeyWeaker(t,key);
+	  //pulling creates additional unifiability
+	  int create_unif = typeOverlapped (t) != NULL;
+	  //pulling leaks secret to the intruder though oracles
+	  int leak_secret = isSubtermInTermlist (t, secret);
+	  //term may contain sensitive agent identities
+
+	  /*
+	     int agent_sensitive = !isAuthProvider(t)&&
+	     ((innercrypto.type!=SYM&&containDiffAgent(t,TermOp(innercrypto.info)))||
+	     (innercrypto.type==SYM&&containDiffAgent(t,NULL)));
+	   */
+	  int agent_sensitive =
+	    ((cryptotype != SYM && containDiffAgent (t, key))
+	     || (cryptotype == SYM && containDiffAgent (t, NULL)))
+	    && getCryptoType (t) != MAC;
+
+	  //pull out if
+	  if (!leak_secret && !create_unif)
+	    {
+	      Termlist newpull = makeTermlist ();
+	      Termlist newkeep;
+	      newpull->prev = NULL;
+	      newpull->term = tmp->term;
+	      newpull->next = *pull;
+
+	      Termlist prev = tmp->prev;
+	      Term ttmp;
+	      if (prev == NULL)
+		newkeep = tmp->next;
+	      else
 		{
-			computeGlobalLabel(t);
-			tmp->term->abst=1;
-			//check if the key is useful to protect the term
-			//int good_key=cryptotype!=SYM||!sessionKeyWeaker(t,key);
-			//pulling creates additional unifiability
-			int create_unif = typeOverlapped(t)!=NULL;
-		    //pulling leaks secret to the intruder though oracles
-			int leak_secret = isSubtermInTermlist(t, secret);
-			//term may contain sensitive agent identities
-
-			/*
-			int agent_sensitive = !isAuthProvider(t)&&
-					              ((innercrypto.type!=SYM&&containDiffAgent(t,TermOp(innercrypto.info)))||
-								  (innercrypto.type==SYM&&containDiffAgent(t,NULL)));
-			*/
-			int agent_sensitive = ((cryptotype!=SYM&&containDiffAgent(t,key))||(cryptotype==SYM&&containDiffAgent(t,NULL)))&&
-					              getCryptoType(t)!=MAC;
-
-			//pull out if
-			if(!leak_secret&&!create_unif)
-			{
-				Termlist newpull = makeTermlist();
-				Termlist newkeep;
-				newpull->prev = NULL;
-				newpull->term = tmp->term;
-				newpull->next=*pull;
-
-				Termlist prev = tmp->prev;
-				Term ttmp;
-				if(prev==NULL)
-					newkeep = tmp->next;
-				else
-				{
-					prev->next = tmp->next;
-					newkeep = *keep;
-				}
-				ttmp =createTmpTerm(0, newpull, newkeep, key);
-
-				//eprintf("Try to pull:");
-				//printTerm(ttmp);
-				//eprintf("\n");
-
-				int isSafe = checkLabelPreservation(ttmp,sec_outer,auth_outer,ACCESSIBLE);
-				termDelete(ttmp);
-				free(newpull);
-				newpull=NULL;
-				if(prev!=NULL)
-					prev->next=tmp;
-				if(isSafe&&(!agent_sensitive||occurSomeWhere(t,newkeep)))
-				{
-					*pull = termlistAdd(*pull,tmp->term);
-					//remove from keep list
-					tmp=removePatVar(tmp,keep);
-					continue;
-				}
-			}
+		  prev->next = tmp->next;
+		  newkeep = *keep;
 		}
-		//cannot pull out
-		tmp = tmp->next;
+	      ttmp = createTmpTerm (0, newpull, newkeep, key);
+
+	      //eprintf("Try to pull:");
+	      //printTerm(ttmp);
+	      //eprintf("\n");
+
+	      int isSafe = (sec_outer >= sec_inner
+			    && auth_outer >= auth_inner)
+		|| checkLabelPreservation (ttmp, sec_outer, auth_outer,
+					   ACCESSIBLE);
+	      termDelete (ttmp);
+	      free (newpull);
+	      newpull = NULL;
+	      if (prev != NULL)
+		prev->next = tmp;
+	      if (isSafe && (!agent_sensitive || occurSomeWhere (t, newkeep)))
+		{
+		  *pull = termlistAdd (*pull, tmp->term);
+		  //remove from keep list
+		  tmp = removePatVar (tmp, keep);
+		  continue;
+		}
+	    }
 	}
-	UnexpectedFuncSymbForEnc(keep,pull);
-	/* agent names encrypted with long-term shared keys may still be essential ==> must be kept
-	if(containOnlyAgentInPatList(*keep))
-	{
-		eqtype=SYSTEM_PULL_OUT;
-		*pull = termlistConcat(*pull,*keep);
-		*keep=NULL;
-	}
-	*/
-	return *pull!=NULL?SYSTEM_PULL_OUT:SYSTEM_TRIVIAL;
+      //cannot pull out
+      tmp = tmp->next;
+    }
+  UnexpectedFuncSymbForEnc (keep, pull);
+  /* agent names encrypted with long-term shared keys may still be essential ==> must be kept
+     if(containOnlyAgentInPatList(*keep))
+     {
+     eqtype=SYSTEM_PULL_OUT;
+     *pull = termlistConcat(*pull,*keep);
+     *keep=NULL;
+     }
+   */
+  return *pull != NULL ? SYSTEM_PULL_OUT : SYSTEM_TRIVIAL;
 }
 
 //check if the type violate disjointness condition
-int isPatternDisjointness(Term typ1)
+int
+isPatternDisjointness (Term typ1)
 {
-	Eqlist eqlist = eql;
-	while(eqlist!=NULL)
+  Eqlist eqlist = eql;
+  while (eqlist != NULL)
+    {
+      Term typ2 = getTermType (eqlist->eq->left);
+      int isCompr = isComparable (typ1, typ2);
+      if (isCompr)
 	{
-		Term typ2 = getTermType(eqlist->eq->left);
-		int isCompr = isComparable(typ1,typ2);
-		if(isCompr)
-		{
-			return 0;
-		}
-		eqlist=eqlist->next;
+	  return 0;
 	}
-	return 1;
+      eqlist = eqlist->next;
+    }
+  return 1;
 }
 
 
-void addForbiddenTypes(Term pattype, Term term)
+void
+addForbiddenTypes (Term pattype, Term term)
 {
-	if(realTermTuple(pattype))
-	{
-		addForbiddenTypes(TermOp1(pattype), term);
-		addForbiddenTypes(TermOp2(pattype), term);
-	}
-	else if(realTermEncrypt(pattype))
-	{
-		Term t = substitutedTerm(pattype);
-		t->originType=term;
-		forbidden = termlistAdd(forbidden, t);
-	}
+  if (realTermTuple (pattype))
+    {
+      addForbiddenTypes (TermOp1 (pattype), term);
+      addForbiddenTypes (TermOp2 (pattype), term);
+    }
+  else if (realTermEncrypt (pattype))
+    {
+      Term t = substitutedTerm (pattype);
+      t->originType = term;
+      forbidden = termlistAdd (forbidden, t);
+    }
 }
 
-int findPositionForOrdering(Termlist *pattern, Termlist type)
+int
+findPositionForOrdering (Termlist * pattern, Termlist type)
 {
-	Termlist tmp2=type;
-	int pos = 1;
-	while(tmp2!=NULL)
+  Termlist tmp2 = type;
+  int pos = 1;
+  while (tmp2 != NULL)
+    {
+      if (!isTermEqual (tmp2->term, TERM_Ticket))
 	{
-		if(!isTermEqual(tmp2->term,TERM_Ticket))
+	  Termlist tmp1 = *pattern;
+	  while (tmp1 != NULL)
+	    {
+	      Term type1 = getTermType (tmp1->term->subst);
+	      if (!isComparable (tmp2->term, type1))
 		{
-			Termlist tmp1 = *pattern;
-			while(tmp1!=NULL)
-			{
-				Term type1 = getTermType(tmp1->term->subst);
-				if(!isComparable(tmp2->term,type1))
-				{
-					//we found a type that does not match, so keep it at pos
-					tmpl=tmp1;
-					return pos;
-				}
-				tmp1=tmp1->next;
-			}
+		  //we found a type that does not match, so keep it at pos
+		  tmpl = tmp1;
+		  return pos;
 		}
-		tmp2 = tmp2->next;
-		pos++;
+	      tmp1 = tmp1->next;
+	    }
 	}
-	return 0;
+      tmp2 = tmp2->next;
+      pos++;
+    }
+  return 0;
 }
 
-int findPositionForRefinement(Termlist *pattern, Termlist type)
+int
+findPositionForRefinement (Termlist * pattern, Termlist type)
 {
-	Termlist tmp2=type;
-	int pos = 1;
-	int good_pos = 0;
-	int min_size=INT_MAX;
-	while(tmp2!=NULL)
+  Termlist tmp2 = type;
+  int pos = 1;
+  int good_pos = 0;
+  int min_size = INT_MAX;
+  while (tmp2 != NULL)
+    {
+      if (!isTermEqual (tmp2->term, TERM_Ticket))
 	{
-		if(!isTermEqual(tmp2->term,TERM_Ticket))
+	  Termlist tmp1 = *pattern;
+	  while (tmp1 != NULL)
+	    {
+	      Term type1 = getTermType (tmp1->term->subst);
+	      if (!isComparable (tmp2->term, type1))
 		{
-			Termlist tmp1 = *pattern;
-			while(tmp1!=NULL)
-			{
-				Term type1 = getTermType(tmp1->term->subst);
-				if(!isComparable(tmp2->term,type1))
-				{
-					//we save the term with smallest size
-					int size = size_of_term(tmp1->term->subst);
-					if(size<min_size)
-					{
-						tmpl=tmp1;
-						min_size=size;
-						good_pos=pos;
-					}
-				}
-				tmp1=tmp1->next;
-			}
+		  //we save the term with smallest size
+		  int size = size_of_term (tmp1->term->subst);
+		  if (size < min_size)
+		    {
+		      tmpl = tmp1;
+		      min_size = size;
+		      good_pos = pos;
+		    }
 		}
-		tmp2 = tmp2->next;
-		pos++;
+	      tmp1 = tmp1->next;
+	    }
 	}
-	return good_pos;
+      tmp2 = tmp2->next;
+      pos++;
+    }
+  return good_pos;
 }
 
-int adaptKeeplistByRefinement(Termlist *keep, Termlist *pull, Termlist type)
+int
+adaptKeeplistByRefinement (Termlist * keep, Termlist * pull, Termlist type)
 {
-	if(*pull==NULL) return 0;
-	int pos = findPositionForRefinement(pull,type);
-	if(!pos) return 0;
-	int i = 1;
-	Termlist tmp = *keep;
-	while(i!=pos)
-	{
-		tmp = tmp->next;
-		i++;
-	}
-	Term t = tmpl->term;
-	Termlist tl = makeTermlist();
-	tl->term= t;
-	tl->prev = tmp->prev;
-	tl->next = tmp;
-	if(tmp->prev!=NULL)
-	tmp->prev->next = tl;
-	tmp->prev = tl;
-	if(i==1) *keep=tl;
-	*pull = termlistDelTerm(tmpl);
-	return 1;
+  if (*pull == NULL)
+    return 0;
+  int pos = findPositionForRefinement (pull, type);
+  if (!pos)
+    return 0;
+  int i = 1;
+  Termlist tmp = *keep;
+  while (i != pos)
+    {
+      tmp = tmp->next;
+      i++;
+    }
+  Term t = tmpl->term;
+  Termlist tl = makeTermlist ();
+  tl->term = t;
+  tl->prev = tmp->prev;
+  tl->next = tmp;
+  if (tmp->prev != NULL)
+    tmp->prev->next = tl;
+  tmp->prev = tl;
+  if (i == 1)
+    *keep = tl;
+  *pull = termlistDelTerm (tmpl);
+  return 1;
 }
 
-int adaptKeeplistByOrdering(Termlist *keep, Termlist type)
+int
+adaptKeeplistByOrdering (Termlist * keep, Termlist type)
 {
-	int pos = findPositionForOrdering(keep,type);
-	if(!pos) return 0;
-	Termlist tmp1;
-	int i = 1;
-	tmp1=*keep;
-	while(i!=pos)
-	{
-		tmp1 = tmp1->next;
-		i++;
-	}
-	//swap tmp1 and tmpl
-	Term tmp = tmp1->term;
-	tmp1->term= tmpl->term;
-	tmpl->term = tmp;
-	return 1;
+  int pos = findPositionForOrdering (keep, type);
+  if (!pos)
+    return 0;
+  Termlist tmp1;
+  int i = 1;
+  tmp1 = *keep;
+  while (i != pos)
+    {
+      tmp1 = tmp1->next;
+      i++;
+    }
+  //swap tmp1 and tmpl
+  Term tmp = tmp1->term;
+  tmp1->term = tmpl->term;
+  tmpl->term = tmp;
+  return 1;
 }
 
-void findSmallestPatVar(Term pat, Term *var, int *min_size)
+void
+findSmallestPatVar (Term pat, Term * var, int *min_size)
 {
-	if(realTermLeaf(pat))
+  if (realTermLeaf (pat))
+    {
+      int size = size_of_term (pat->subst);
+      if (size < *min_size)
 	{
-		int size = size_of_term(pat->subst);
-		if(size<*min_size)
-		{
-			*min_size = size;
-			*var = pat;
-		}
+	  *min_size = size;
+	  *var = pat;
 	}
-	else if(realTermTuple(pat))
-	{
-		findSmallestPatVar(TermOp1(pat), var, min_size);
-		findSmallestPatVar(TermOp2(pat), var, min_size);
-	}
+    }
+  else if (realTermTuple (pat))
+    {
+      findSmallestPatVar (TermOp1 (pat), var, min_size);
+      findSmallestPatVar (TermOp2 (pat), var, min_size);
+    }
 }
 
-int fixUnifIssue(const int isHash, Term key, Termlist *keep, Termlist *pull, int bound)
+int
+fixUnifIssue (const int isHash, Term key, Termlist * keep, Termlist * pull,
+	      int bound)
 {
-	if(bound>UNIFDEPTH) return 0;
-	int result;
-		Term u ;
-		if(isHash)
-		{
-			u = makeTermFcall(turn_termlist_to_tuple(*keep), key);
-		}
-		else
-		{
-			u=makeTermEncrypt(turn_termlist_to_tuple(*keep), key);
-		}
-		if(!inTermlist(unif,u)) unif = termlistAdd(unif,u);
-		else
-		{
-			result= NO_FIX;
-		}
-		//check if a pair of messages become unifiable
-		Term subst = substitutedTerm(u);
+  if (bound > UNIFDEPTH)
+    return 0;
+  int result;
+  Term u;
+  if (isHash)
+    {
+      u = makeTermFcall (turn_termlist_to_tuple (*keep), key);
+    }
+  else
+    {
+      u = makeTermEncrypt (turn_termlist_to_tuple (*keep), key);
+    }
+  if (!inTermlist (unif, u))
+    unif = termlistAdd (unif, u);
+  else
+    {
+      result = NO_FIX;
+    }
+  //check if a pair of messages become unifiable
+  Term subst = substitutedTerm (u);
 
-		//only check for unifiability if the term contains some authenticated elements in plaintext
-		//if(plaintextTermlistInTerm(subst,authav))
-		if(containEssentialTerm(subst))
-		{
-			Term type =  typeOverlapped(subst);
-			if(type!=NULL)
-			{
-				Termlist typel = turn_tuple_to_termlist(TermOp(type));
-				if(adaptKeeplistByOrdering(keep,typel)||adaptKeeplistByRefinement(keep,pull,typel))
-				{
-					result= fixUnifIssue(isHash, key, keep, pull, bound+1);
-					if(result==NOT_NEED) result = FIXED;
-				}
-				else
-				{
-					result= NO_FIX;
-				}
-				termlistDelete(typel);
-			}
-			else result=NOT_NEED;
-		}
-	termlistDestroy(unif);
-	unif=NULL;
-	return result;
+  //only check for unifiability if the term contains some authenticated elements in plaintext
+  //if(plaintextTermlistInTerm(subst,authav))
+  if (containEssentialTerm (subst))
+    {
+      Term type = typeOverlapped (subst);
+      if (type != NULL)
+	{
+	  Termlist typel = turn_tuple_to_termlist (TermOp (type));
+	  if (adaptKeeplistByOrdering (keep, typel)
+	      || adaptKeeplistByRefinement (keep, pull, typel))
+	    {
+	      result = fixUnifIssue (isHash, key, keep, pull, bound + 1);
+	      if (result == NOT_NEED)
+		result = FIXED;
+	    }
+	  else
+	    {
+	      result = NO_FIX;
+	    }
+	  termlistDelete (typel);
+	}
+      else
+	result = NOT_NEED;
+    }
+  termlistDestroy (unif);
+  unif = NULL;
+  return result;
 }
 
-void constructKeepPull(Term right, Termlist *keep, Termlist *pull)
+void
+constructKeepPull (Term right, Termlist * keep, Termlist * pull)
 {
-	if(realTermLeaf(right))
-		*pull = termlistAdd(*pull,right);
-	else if(realTermEncrypt(right))
-		*keep = turn_tuple_to_termlist(TermOp(right));
-	else
-	{
-		constructKeepPull(TermOp1(right),keep,pull);
-		constructKeepPull(TermOp2(right), keep,pull);
-	}
+  if (realTermLeaf (right))
+    *pull = termlistAdd (*pull, right);
+  else if (realTermEncrypt (right))
+    *keep = turn_tuple_to_termlist (TermOp (right));
+  else
+    {
+      constructKeepPull (TermOp1 (right), keep, pull);
+      constructKeepPull (TermOp2 (right), keep, pull);
+    }
 }
 
 /*
@@ -1933,360 +2167,495 @@ Equation adaptAndAddEquation(Term t, int eqtype, Equation eq, Term pattype,Terml
 }
 */
 
-int termlistCompare(Termlist tl1, Termlist tl2)
+int
+termlistCompare (Termlist tl1, Termlist tl2)
 {
-	while(tl1!=NULL)
-	{
-		if(tl2==NULL) return 0;
-		if(!isTermEqual(tl1->term, tl2->term))
-			return 0;
-		tl1 = tl1->next;
-		tl2 = tl2->next;
-	}
-	return 1;
+  while (tl1 != NULL)
+    {
+      if (tl2 == NULL)
+	return 0;
+      if (!isTermEqual (tl1->term, tl2->term))
+	return 0;
+      tl1 = tl1->next;
+      tl2 = tl2->next;
+    }
+  return 1;
 }
 
-Equation adaptAndAddEquation(Term t, int eqtype, Equation eq, Term pattype,Termlist *keep, Termlist *pull)
+Equation
+adaptAndAddEquation (Term t, int eqtype, Equation eq, Term pattype,
+		     Termlist * keep, Termlist * pull)
 {
-	Term key = TermKey(eq->left);
-	if(eqtype>SYSTEM_TRIVIAL)
+  Term key = TermKey (eq->left);
+  if (eqtype > SYSTEM_TRIVIAL)
+    {
+      eq->type = eqtype;
+      if (*keep == NULL)
 	{
-		eq->type=eqtype;
-		if(*keep==NULL)
+	  if (*pull == NULL)
+	    {
+	      //should be a nil-free abstraction, so we keep the smallest term
+	      int min = INT_MAX;
+	      Term right;
+	      findSmallestPatVar (TermOp (eq->left), &right, &min);
+	      eq->right = right;
+	    }
+	  else
+	    eq->right = termlist_to_tuple (*pull);
+	}
+      else
+	{
+	  //adapt the equation type
+	  if (*pull == NULL)
+	    {
+	      if (t->helper.fcall)
 		{
-			if(*pull==NULL)
-			{
-				//should be a nil-free abstraction, so we keep the smallest term
-				int min = INT_MAX;
-				Term right;
-				findSmallestPatVar(TermOp(eq->left),&right,&min);
-				eq->right=right;
-			}
-			else eq->right=termlist_to_tuple(*pull);
+		  if (eqtype != SYSTEM_REMOVE_FIELD)
+		    //eq->type=SYSTEM_REORDER;
+		    eq->type = SYSTEM_TRIVIAL;
 		}
-		else
-		{
-			//adapt the equation type
-			if(*pull==NULL)
-			{
-				if(t->helper.fcall)
-				{
-					if(eqtype!=SYSTEM_REMOVE_FIELD)
-						//eq->type=SYSTEM_REORDER;
-						eq->type=SYSTEM_TRIVIAL;
-				}
-				else eq->type=SYSTEM_TRIVIAL;
+	      else
+		eq->type = SYSTEM_TRIVIAL;
 
-			}
-			int result = fixUnifIssue(t->helper.fcall, key, keep, pull,0);
-			if(result!=NO_FIX)
-			{
-				termDelete(eq->right);
-				Term u ;
-				if(eq->left->helper.fcall)
-					u = makeTermFcall(turn_termlist_to_tuple(*keep), key);
-				else
-					u=makeTermEncrypt(turn_termlist_to_tuple(*keep), key);
-				if(*pull==NULL)
-				{
-					eq->right=u;
-					Termlist tmp = turn_tuple_to_termlist(TermOp(eq->left));
-					int equal = termlistCompare(tmp, *keep);
-					if(equal) eq->type = SYSTEM_TRIVIAL;
-					else eq->type = SYSTEM_REMOVE_FIELD;
-					termlistDelete(tmp);
-				}
-				else
-				{
-					eq->right=termlist_to_tuple(termlistAdd(*pull,u));
-					eq->type = SYSTEM_PULL_OUT;
-				}
-			}
-			else
-			{
-				//cannot fix this way, so keep the trivial equation
-				eq->right = eq->left;
-				eq->type=SYSTEM_TRIVIAL;
-			}
+	    }
+	  int result = fixUnifIssue (t->helper.fcall, key, keep, pull, 0);
+	  if (result != NO_FIX)
+	    {
+	      termDelete (eq->right);
+	      Term u;
+	      if (eq->left->helper.fcall)
+		u = makeTermFcall (turn_termlist_to_tuple (*keep), key);
+	      else
+		u = makeTermEncrypt (turn_termlist_to_tuple (*keep), key);
+	      if (*pull == NULL)
+		{
+		  eq->right = u;
+		  Termlist tmp = turn_tuple_to_termlist (TermOp (eq->left));
+		  int equal = termlistCompare (tmp, *keep);
+		  if (equal)
+		    eq->type = SYSTEM_TRIVIAL;
+		  else
+		    eq->type = SYSTEM_REMOVE_FIELD;
+		  termlistDelete (tmp);
 		}
+	      else
+		{
+		  eq->right = termlist_to_tuple (termlistAdd (*pull, u));
+		  eq->type = SYSTEM_PULL_OUT;
+		}
+	    }
+	  else
+	    {
+	      //cannot fix this way, so keep the trivial equation
+	      eq->right = eq->left;
+	      eq->type = SYSTEM_TRIVIAL;
+	    }
 	}
-	else
-	{
-		eq->right = eq->left;
-		eq->type=SYSTEM_TRIVIAL;
-	}
-	makeHomomorphic(eq->right);
-	Equation neweq=resolveDisjointnessConflict(pattype);
-	if(neweq==NULL) eql=equationlistAdd(eql,eq);
-	else if(abstCost(eq)<abstCost(neweq))
-	{
-		eql=equationlistAdd(eql,eq);
-		eql = removeEquationFromList(eql,neweq);
-	}
-	else
-	{
-		deleteEquation(eq);
-		//eprintf("equation replaced:");
-		//printEquation(neweq->left,neweq->right);
-		//eprintf("\n");
-		return neweq;
-	}
-	//eprintf("equation created:");
-	//printEquation(eq->left,eq->right);
-	//eprintf("\n");
-	return eq;
+    }
+  else
+    {
+      eq->right = eq->left;
+      eq->type = SYSTEM_TRIVIAL;
+    }
+  makeHomomorphic (eq->right);
+  Equation neweq = resolveDisjointnessConflict (pattype);
+  if (neweq == NULL)
+    eql = equationlistAdd (eql, eq);
+  else if (abstCost (eq) < abstCost (neweq))
+    {
+      eql = equationlistAdd (eql, eq);
+      eql = removeEquationFromList (eql, neweq);
+    }
+  else
+    {
+      deleteEquation (eq);
+      //eprintf("equation replaced:");
+      //printEquation(neweq->left,neweq->right);
+      //eprintf("\n");
+      return neweq;
+    }
+  //eprintf("equation created:");
+  //printEquation(eq->left,eq->right);
+  //eprintf("\n");
+  return eq;
 }
 
 //check if a term's type comparable with some secret's type
-int overlapSecret(Term type)
+int
+overlapSecret (Term type)
 {
-	Termlist tl = secret;
-	while(tl!=NULL)
-	{
-		Term sectype = getTermType(tl->term);
-		if(isComparable(type,sectype))
-			return 1;
-		tl = tl->next;
-	}
-	return 0;
+  Termlist tl = secret;
+  while (tl != NULL)
+    {
+      Term sectype = getTermType (tl->term);
+      if (isComparable (type, sectype))
+	return 1;
+      tl = tl->next;
+    }
+  return 0;
 }
 
 //create an equation that abstracts a protocol term
-int createEquationForTerm(Term t, int sec_outer, int auth_outer)
+int
+createEquationForTerm (Term t, int sec_outer, int auth_outer)
 {
-	int success=false;
-	int eqtype;
-	if(realTermEncrypt(t))
+  int success = false;
+  int eqtype;
+  if (realTermEncrypt (t))
+    {
+      //check if the term's secrecy label are not less than what the outercrypto provides
+      if (isLTKey (t))
+	return 0;
+      Term type = getIntendedPatternType (t);
+      //eprintf("create equation for term:");
+      //printTerm(t);
+      //eprintf(":");
+      //printTerm(type);
+      //printf("\n");
+      if (coveredByFixEquations (type))
+	return 0;
+      int cryptotype = getCryptoType (t);
+      struct cryptolabel clb = getCryptoLabel (t);
+      Term key = TermKey (t);
+      if (t->helper.fcall
+	  && (inTermlist (topconst, key) || inTermlist (homfunc, key)))
 	{
-		//check if the term's secrecy label are not less than what the outercrypto provides
-		if(isLTKey(t)) return 0;
-		Term type = getIntendedPatternType(t);
-		//eprintf("create equation for term:");
-		//printTerm(t);
-		//eprintf(":");
-		//printTerm(type);
-		//printf("\n");
-		if(coveredByFixEquations(type)) return 0;
-		int cryptotype = getCryptoType(t);
-		struct cryptolabel clb = getCryptoLabel(t);
-		Term key = TermKey(t);
-		if(t->helper.fcall&&(inTermlist(topconst,key)||inTermlist(homfunc,key)))
-		{
-			//in order to use the syntactic criterion, the equation for this hash function needs to be homomorphic
-			if(!inTermlist(homeq,key))
-			{
-				eql = equationlistAdd(eql,createTicketHomomorphicPatForHash(key));
-				homeq = termlistAdd(homeq,key);
-			}
-			currdepth++;
-			return createEquationForTerm(TermOp(t), max(sec_outer,clb.sec_crypt), max(auth_outer,clb.auth_crypt));
-		}
-
-		Equation eq = makeEquation();
-		eq->type=SYSTEM_TRIVIAL;
-		eq->left=createPatFromType(type);
-		eq->left->stype =termlistAdd(NULL,type);
-		patternMatching(eq->left,t);
-		Termlist op = turn_tuple_to_termlist(TermOp(eq->left));
-		Termlist pull=NULL;
-
-		int secretOverlap = overlapSecret(type);
-		//hashes
-		if(t->helper.fcall)
-		{
-			parentTerm=t;
-			eqtype=buildPatternForHash(secretOverlap,&pull,&op, sec_outer, auth_outer, key);
-			success= eqtype>SYSTEM_TRIVIAL;
-		}
-		//encryptions
-		else
-		{
-			if(cryptotype==SYM)
-			{
-				eqtype=buildPatternForEnc(secretOverlap,type,&pull,&op,sec_outer, auth_outer, cryptotype,key);
-				//int success = eqtype>SYSTEM_TRIVIAL;
-				if(!plaintextAppearInTermlist(key,comp))
-					success= createEquationForTerm(key,SEC, AUTH)||eqtype>SYSTEM_TRIVIAL;
-			}
-			else
-			{
-				eqtype=buildPatternForEnc(secretOverlap,type,&pull,&op,sec_outer, auth_outer,cryptotype,key);
-				success=eqtype>SYSTEM_TRIVIAL;
-			}
-		}
-
-		Equation neweq=adaptAndAddEquation(t,eqtype,eq, type,&op, &pull);
-		success = neweq->type>SYSTEM_TRIVIAL;
-		//if(outercrypto.type==NONE)
-		if(sec_outer==NOSEC&&auth_outer==NOAUTH)
-			addForbiddenTypes(neweq->right,term);
-		termlistDelete(pull);
-		termlistDelete(op);
-		op=pull=NULL;
-		if(!success)
-		//if(trivialEquationlist(eql))
-		{
-			currdepth++;
-			return createEquationForTerm(TermOp(t),max(sec_outer,clb.sec_crypt), max(auth_outer,clb.auth_crypt));
-		}
+	  //in order to use the syntactic criterion, the equation for this hash function needs to be homomorphic
+	  if (!inTermlist (homeq, key))
+	    {
+	      eql =
+		equationlistAdd (eql,
+				 createTicketHomomorphicPatForHash (key));
+	      homeq = termlistAdd (homeq, key);
+	    }
+	  currdepth++;
+	  return createEquationForTerm (TermOp (t),
+					max (sec_outer, clb.sec_crypt),
+					max (auth_outer, clb.auth_crypt));
 	}
-	else if(realTermTuple(t))
+
+      Equation eq = makeEquation ();
+      eq->type = SYSTEM_TRIVIAL;
+      eq->left = createPatFromType (type);
+      eq->left->stype = termlistAdd (NULL, type);
+      patternMatching (eq->left, t);
+      Termlist op = turn_tuple_to_termlist (TermOp (eq->left));
+      Termlist pull = NULL;
+
+      int secretOverlap = overlapSecret (type);
+      //hashes
+      if (t->helper.fcall)
 	{
-		int result1=createEquationForTerm(TermOp1(t),sec_outer, auth_outer);
-		int result2 = createEquationForTerm(TermOp2(t),sec_outer, auth_outer);
-		return result1||result2;
+	  parentTerm = t;
+	  eqtype =
+	    buildPatternForHash (secretOverlap, &pull, &op, sec_outer,
+				 auth_outer, clb.sec_crypt, clb.auth_crypt,
+				 key);
+	  success = eqtype > SYSTEM_TRIVIAL;
 	}
-	return success;
-}
-
-
-
-void createEquations()
-{
-	homeq = NULL;
-	Termlist tl = comp;
-	while(tl!=NULL)
+      //encryptions
+      else
 	{
-		term = getTermType(tl->term);
-		bigterm = tl->term;
-		currdepth=0;
-		createEquationForTerm(tl->term,NOSEC, NOAUTH);
-		tl=tl->next;
+	  if (cryptotype == SYM)
+	    {
+	      eqtype =
+		buildPatternForEnc (secretOverlap, type, &pull, &op,
+				    sec_outer, auth_outer, clb.sec_crypt,
+				    clb.auth_crypt, cryptotype, key);
+	      //int success = eqtype>SYSTEM_TRIVIAL;
+	      if (!plaintextAppearInTermlist (key, comp))
+		success = createEquationForTerm (key, SEC, AUTH)
+		  || eqtype > SYSTEM_TRIVIAL;
+	    }
+	  else
+	    {
+	      eqtype =
+		buildPatternForEnc (secretOverlap, type, &pull, &op,
+				    sec_outer, auth_outer, clb.sec_crypt,
+				    clb.auth_crypt, cryptotype, key);
+	      success = eqtype > SYSTEM_TRIVIAL;
+	    }
 	}
-	termlistDelete(homeq);
-}
 
-void abstractSecrets()
-{
-	Termlist tl;
-	for(tl = secret; tl!=NULL; tl= tl->next)
-		tl->term = frec(tl->term);
-}
-
-int containNoSendEvent(Role r)
-{
-	Roledef rd;
-	for(rd=r->roledef; rd!=NULL; rd=rd->next)
-		if(rd->type==SEND) return 0;
-	return 1;
-}
-
-void removeEventInRole(Role *r)
-{
-	Roledef rd=(*r)->roledef ;
-	Roledef prev = NULL;
-	while(rd!=NULL)
+      Equation neweq = adaptAndAddEquation (t, eqtype, eq, type, &op, &pull);
+      success = neweq->type > SYSTEM_TRIVIAL;
+      //if(outercrypto.type==NONE)
+      if (sec_outer == NOSEC && auth_outer == NOAUTH)
+	addForbiddenTypes (neweq->right, term);
+      termlistDelete (pull);
+      termlistDelete (op);
+      op = pull = NULL;
+      if (!success)
+	//if(trivialEquationlist(eql))
 	{
-		if(rd->type!=CLAIM)
+	  currdepth++;
+	  return createEquationForTerm (TermOp (t),
+					max (sec_outer, clb.sec_crypt),
+					max (auth_outer, clb.auth_crypt));
+	}
+    }
+  else if (realTermTuple (t))
+    {
+      int result1 =
+	createEquationForTerm (TermOp1 (t), sec_outer, auth_outer);
+      int result2 =
+	createEquationForTerm (TermOp2 (t), sec_outer, auth_outer);
+      return result1 || result2;
+    }
+  return success;
+}
+
+
+void
+OriginalLabelInit (Term t)
+{
+  t->seclabel.org_auth = t->seclabel.org_sec = UNDEFINED;
+}
+
+void
+computeOriginalLabel (Term t, int seclabel, int authlabel, int access)
+{
+  if (access == ACCESSIBLE)
+    t->accessible = access;
+  if (seclabel != NOSEC || authlabel != NOAUTH)
+    {
+      if (t->inIK == YES
+	  || (t->inIK == UNKNOWN && inKnowledge (sys->know, t)))
+	{
+	  t->seclabel.org_sec = NOSEC;
+	  t->seclabel.org_auth = NOAUTH;
+	}
+    }
+  if (t->seclabel.org_sec == UNDEFINED)
+    t->seclabel.org_sec = seclabel;
+  else
+    t->seclabel.org_sec = min (t->seclabel.org_sec, seclabel);
+  if (t->seclabel.org_auth == UNDEFINED)
+    t->seclabel.org_auth = authlabel;
+  else
+    t->seclabel.org_auth = max (t->seclabel.org_auth, authlabel);
+  if (realTermEncrypt (t))
+    {
+      Term op = TermOp (t);
+      if (t->helper.fcall)
+	{
+	  if (isInverseKey (TermKey (t)))
+	    computeOriginalLabel (op, seclabel, authlabel, access);
+	  else if (containLTSharedKeyInPlain (op) != NULL)	//it is a MAC
+	    computeOriginalLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
+	  else
+	    {
+	      if (plaintextTmpSecure (op))
 		{
-			Roledef tmp = rd;
-			if(prev==NULL)
-			{
-				(*r)->roledef=rd->next;
-			}
-			else
-			{
-				prev->next=rd->next;
-			}
-			rd=removeRoleEvent(prev,tmp);
-			continue;
+		  computeOriginalLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 		}
-		prev=rd;
-		rd=rd->next;
+	      else
+		computeOriginalLabel (op, SEC, authlabel, NOT_ACCESSIBLE);	//otherwise, a normal hash
+	    }
 	}
-}
-System removeUselessEvents(System sys)
-{
-	Protocol p;
-	for(p=sys->protocols; p!=NULL; p = p->next)
+      else
 	{
-		//it seems removing such redundancies in the main protocol make things worse, so we do only for oracles
-		if(isHelperProtocol(p))
+	  Term key = TermKey (t);
+	  if (isPublicKey (key))	//if it is public-key encryption
+	    {
+	      //check if some agent identifiers are there
+	      if (containDiffAgent (op, TermOp (key)))
 		{
-			Role r = p->roles;
-			while(r!=NULL)
-			{
-				if(containNoSendEvent(r))
-				{
-					removeEventInRole(&r);
-				}
-				r = r->next;
-			}
+		  computeOriginalLabel (op, SEC, AUTH, access);
 		}
+	      else
+		{
+		  if (plaintextTmpSecure (op))
+		    computeOriginalLabel (op, SEC, AUTH, access);
+		  else
+		    computeOriginalLabel (op, SEC, authlabel, access);
+		}
+	    }
+	  else if (isPrivateKey (key))	// if it is a signature
+	    {
+	      computeOriginalLabel (op, seclabel, AUTH, access);
+	    }
+	  else if (isLTSharedKey (key))
+	    {
+	      computeOriginalLabel (op, SEC, AUTH, access);
+	    }
+	  else			//symmetric encryption with a session key
+	    {
+	      int newsec =
+		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
+	      int newauth = containDiffAgent (op, NULL) ? max (authlabel,
+							       MAYBE_AUTH) :
+		authlabel;
+	      computeOriginalLabel (op, newsec, newauth, access);
+	    }
 	}
-	return sys;
+    }
+  else if (realTermTuple (t))
+    {
+      computeOriginalLabel (TermOp1 (t), seclabel, authlabel, access);
+      computeOriginalLabel (TermOp2 (t), seclabel, authlabel, access);
+    }
 }
-System abstractSystem(System sys)
+
+
+void
+createEquations ()
 {
-	heuristicInit(sys);
-	initialAnalysis();
-	createEquations();
-	//eprintf("equations:\n");
-	//printEquationlist(eql);
-	//eprintf("\n");
-	//apply several abstractions
-	typebasedInit(sys);
-	System abssys;
-	typebasedRes = typebasedAbstraction();
-	if(typebasedRes)
-	{
-		abstractSecrets();
-
-		//create new system
-		abssys = systemDuplicate(sys);
-		//apply type-based abstraction
-		abssys = performAbstraction(abssys,sys);
-
-		//do a redundancy abstraction
-		redabsInit(abssys);
-		redRes = redundancyAbstraction();
-		if(redRes) abssys =performAbstraction1(abssys);
-
-		//do an avrem abstraction
-		avremInit(abssys);
-		avRes=avRemoval();
-		if(avRes) abssys =performAbstraction1(abssys);
-	}
-	else
-	{
-		resetAbs(sys);
-		redabsInit(sys);
-		redRes = redundancyAbstraction();
-		if(redRes)
-		{
-			abssys = systemDuplicate(sys);
-			//do a redundancy abstraction
-			abssys=performAbstraction(abssys,sys);
-
-			//do an avrem abstraction
-			avremInit(abssys);
-			avRes=avRemoval();
-			if(avRes) abssys =performAbstraction1(abssys);
-		}
-		else
-		{
-			resetAbs(sys);
-			avremInit(sys);
-			avRes=avRemoval();
-			if(avRes)
-			{
-				abssys = systemDuplicate(sys);
-				abssys = performAbstraction(abssys,sys);
-			}
-			else abssys=sys;
-		}
-	}
-	abssys = removeUselessEvents(abssys);
-	eql=deleteNonPersistentEq(eql);
-	heuristicDone();
-	return abssys;
+  homeq = NULL;
+  Termlist tl = comp;
+  while (tl != NULL)
+    {
+      term = getTermType (tl->term);
+      bigterm = tl->term;
+      currdepth = 0;
+      labelInit (tl->term, OriginalLabelInit);
+      computeOriginalLabel (tl->term, NOSEC, NOAUTH, ACCESSIBLE);
+      createEquationForTerm (tl->term, NOSEC, NOAUTH);
+      tl = tl->next;
+    }
+  termlistDelete (homeq);
 }
 
-int abstractionSucceed()
+void
+abstractSecrets ()
 {
-	return 	typebasedRes || redRes || avRes;
+  Termlist tl;
+  for (tl = secret; tl != NULL; tl = tl->next)
+    tl->term = frec (tl->term);
 }
 
+int
+containNoSendEvent (Role r)
+{
+  Roledef rd;
+  for (rd = r->roledef; rd != NULL; rd = rd->next)
+    if (rd->type == SEND)
+      return 0;
+  return 1;
+}
 
+void
+removeEventInRole (Role * r)
+{
+  Roledef rd = (*r)->roledef;
+  Roledef prev = NULL;
+  while (rd != NULL)
+    {
+      if (rd->type != CLAIM)
+	{
+	  Roledef tmp = rd;
+	  if (prev == NULL)
+	    {
+	      (*r)->roledef = rd->next;
+	    }
+	  else
+	    {
+	      prev->next = rd->next;
+	    }
+	  rd = removeRoleEvent (prev, tmp);
+	  continue;
+	}
+      prev = rd;
+      rd = rd->next;
+    }
+}
 
+System
+removeUselessEvents (System sys)
+{
+  Protocol p;
+  for (p = sys->protocols; p != NULL; p = p->next)
+    {
+      //it seems removing such redundancies in the main protocol make things worse, so we do only for oracles
+      if (isHelperProtocol (p))
+	{
+	  Role r = p->roles;
+	  while (r != NULL)
+	    {
+	      if (containNoSendEvent (r))
+		{
+		  removeEventInRole (&r);
+		}
+	      r = r->next;
+	    }
+	}
+    }
+  return sys;
+}
 
+System
+abstractSystem (System sys)
+{
+  heuristicInit (sys);
+  initialAnalysis ();
+  createEquations ();
+  //eprintf("equations:\n");
+  //printEquationlist(eql);
+  //eprintf("\n");
+  //apply several abstractions
+  typebasedInit (sys);
+  System abssys;
+  typebasedRes = typebasedAbstraction ();
+  if (typebasedRes)
+    {
+      abstractSecrets ();
+
+      //create new system
+      abssys = systemDuplicate (sys);
+      //apply type-based abstraction
+      abssys = performAbstraction (abssys, sys);
+
+      //do a redundancy abstraction
+      redabsInit (abssys);
+      redRes = redundancyAbstraction ();
+      if (redRes)
+	abssys = performAbstraction1 (abssys);
+
+      //do an avrem abstraction
+      avremInit (abssys);
+      avRes = avRemoval ();
+      if (avRes)
+	abssys = performAbstraction1 (abssys);
+    }
+  else
+    {
+      resetAbs (sys);
+      redabsInit (sys);
+      redRes = redundancyAbstraction ();
+      if (redRes)
+	{
+	  abssys = systemDuplicate (sys);
+	  //do a redundancy abstraction
+	  abssys = performAbstraction (abssys, sys);
+
+	  //do an avrem abstraction
+	  avremInit (abssys);
+	  avRes = avRemoval ();
+	  if (avRes)
+	    abssys = performAbstraction1 (abssys);
+	}
+      else
+	{
+	  resetAbs (sys);
+	  avremInit (sys);
+	  avRes = avRemoval ();
+	  if (avRes)
+	    {
+	      abssys = systemDuplicate (sys);
+	      abssys = performAbstraction (abssys, sys);
+	    }
+	  else
+	    abssys = sys;
+	}
+    }
+  abssys = removeUselessEvents (abssys);
+  eql = deleteNonPersistentEq (eql);
+  heuristicDone ();
+  return abssys;
+}
+
+int
+abstractionSucceed ()
+{
+  return typebasedRes || redRes || avRes;
+}

@@ -14,7 +14,7 @@
 #include "termfunc.h"
 #include "absfunc.h"
 
-void avremInit(System);
-int avRemoval1(Protocol p);
-int avRemoval();
+void avremInit (System);
+int avRemoval1 (Protocol p);
+int avRemoval ();
 #endif /* AVREM_H_ */

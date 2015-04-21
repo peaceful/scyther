@@ -8,6 +8,6 @@
 #ifndef ADVFUNC_H_
 #define ADVFUNC_H_
 #include "../knowledge.h"
-void addTermToIK(Knowledge, Term);
+void addTermToIK (Knowledge, Term);
 
 #endif /* ADVFUNC_H_ */

@@ -52,7 +52,7 @@ static int indentDepth = 0;
  *@return A system structure pointer with initial values.
  */
 System
-systemInit()
+systemInit ()
 {
   System sys = (System) malloc (sizeof (struct system));
 
@@ -595,11 +595,11 @@ roleInstanceArachne (const System sys, const Protocol protocol,
    * extterm is NULL, rd is still set as the start and the index pointer of
    * the run.
    */
-   run_prefix_recv (sys, rid, rd, extterm);
+  run_prefix_recv (sys, rid, rd, extterm);
   /* TODO this is not what we want yet, also local knowledge. The local
    * knowledge (list?) also needs to be substituted on invocation. */
   runs[rid].know = NULL;
-   /* now adjust the local run copy */
+  /* now adjust the local run copy */
   run_localize (sys, rid, fromlist, tolist, substlist);
   termlistDelete (fromlist);
   runs[rid].locals = tolist;
@@ -1133,7 +1133,7 @@ iterateLocalToOther (const System sys, const int myrun,
       tt = tls->term;
       if (realTermVariable (tt) && tt->subst != NULL);
       {
-    	  iterateTermOther (myrun, tt->subst, addOther);
+	iterateTermOther (myrun, tt->subst, addOther);
       }
     }
   // now iterate over all of them

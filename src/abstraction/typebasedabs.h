@@ -15,9 +15,9 @@
 #include "termfunc.h"
 #include "protfunc.h"
 #include "patfunc.h"
-void typebasedInit(System mysys);
-int typebasedAbstraction();
-int checkWelldefinednessForEquation(Term left, Term right);
-Equation resolveDisjointnessConflict(Term type);
-Term frec(Term t);
+void typebasedInit (System mysys);
+int typebasedAbstraction ();
+int checkWelldefinednessForEquation (Term left, Term right);
+Equation resolveDisjointnessConflict (Term type);
+Term frec (Term t);
 #endif

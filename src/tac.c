@@ -130,11 +130,11 @@ tacTupleRa (Tac taclist)
 {
   /* check for single node */
   if (taclist->next == NULL)
-	  return taclist;
+    return taclist;
   else
     {
-	  Tac tc;
-	  /* otherwise, write as (x,(y,(z,..))) */
+      Tac tc;
+      /* otherwise, write as (x,(y,(z,..))) */
       tc = tacCreate (TAC_TUPLE);
       tc->t1.tac = taclist;
       tc->t2.tac = tacTupleRa (taclist->next);
@@ -353,12 +353,12 @@ tacPrint (Tac t)
       printf (";\n");
       break;
     case TAC_USER_SUBTYPE:
-    	printf("subtype ");
-      tacPrint(t->t1.tac);
-    	break;
+      printf ("subtype ");
+      tacPrint (t->t1.tac);
+      break;
     case TAC_SUBTYPE:
-    	printf("%s < %s\n",t->t1.sym->text, t->t2.sym->text);
-    	break;
+      printf ("%s < %s\n", t->t1.sym->text, t->t2.sym->text);
+      break;
     default:
       printf ("[??]");
     }

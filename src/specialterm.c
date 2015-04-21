@@ -83,7 +83,7 @@ Termlist CLAIMS_dep_prec;
 void
 specialTermInit (const System sys)
 {
-  /* Init system constants */\
+  /* Init system constants */
   langhide (TERM_Type, "Type");
   langhide (TERM_Hidden, "Hidden");
   langhide (TERM_Claim, "Claim");
@@ -91,13 +91,13 @@ specialTermInit (const System sys)
   langhide (TERM_CoNew, "Co(New)");
   langhide (TERM_DeEx, "DeEx");
   langhide (TERM_DeNew, "DeNew");
-   langcons (TERM_Agent, "Agent", TERM_Type);
+  langcons (TERM_Agent, "Agent", TERM_Type);
   langcons (TERM_Function, "Function", TERM_Type);
   langcons (TERM_Nonce, "Nonce", TERM_Type);
   langcons (TERM_Ticket, "Ticket", TERM_Type);
   langcons (TERM_SessionKey, "SessionKey", TERM_Type);
   langcons (TERM_Data, "Data", TERM_Type);
-  langcons (TERM_NIL,"NIL",TERM_Ticket);
+  langcons (TERM_NIL, "NIL", TERM_Ticket);
 
   langcons (CLAIM_Secret, "Secret", TERM_Claim);
   langcons (CLAIM_Alive, "Alive", TERM_Claim);

@@ -88,11 +88,11 @@ void strings_cleanup (void);
 int yyparse (void);
 
 int modelCheck (const System sys);
-void
-MC_single (const System sys);
+void MC_single (const System sys);
 
 //! The main body, as called by the environment.
-int main (int argc, char **argv)
+int
+main (int argc, char **argv)
 {
   int exitcode = EXIT_NOATTACK;
 
@@ -127,7 +127,7 @@ int main (int argc, char **argv)
   /* parse input */
 
   yyparse ();
-  #ifdef DEBUG
+#ifdef DEBUG
   if (DEBUGL (1))
     tacPrint (spdltac);
 #endif
@@ -136,7 +136,7 @@ int main (int argc, char **argv)
   // Compile no runs for Arachne and preprocess
   compile (spdltac, 0);
   scanner_cleanup ();
-  #ifdef DEBUG
+#ifdef DEBUG
   if (DEBUGL (1))
     {
       printf ("\nCompilation yields:\n\n");
@@ -154,7 +154,7 @@ int main (int argc, char **argv)
 
   /* allocate memory for traces, based on runs */
   //systemStart (sys);
-  //sys->traceKnow[0] = sys->know;	// store initial knowledge
+  //sys->traceKnow[0] = sys->know;      // store initial knowledge
 
   /* add parameters to system */
 
@@ -171,7 +171,7 @@ int main (int argc, char **argv)
       warning ("Selected output method is %i", switches.output);
     }
 #endif
-  runVerification(MC_single);
+  runVerification (MC_single);
   //System abssys = getAbstractSystem();
   //eprintf("abstracted protocol:\n");
   //protocolsPrint(abssys->protocols);
@@ -250,8 +250,8 @@ MC_single (const System sys)
   /*
    * simple one-time check
    */
-	initModelCheck(sys);
-	arachnePrepare();
+  initModelCheck (sys);
+  arachnePrepare ();
 /*
 	bindingInit (sys);
   arachneInit (sys);
@@ -292,4 +292,3 @@ modelCheck (const System sys)
 
   return (sys->failed != STATES0);
 }
-

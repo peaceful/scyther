@@ -96,14 +96,16 @@ isOpenVariable (const Term tvar)
  *
  * Non-variables etc. imply true.
  */
-void printList(Term tl){
-	 Termlist temp = (Termlist)tl->stype;
-	 while(temp!=NULL)
-	 {
-		 printf("%s,", temp->term->left.symb->text);
-		 temp=temp->next;
-	 }
-	 printf("\n");
+void
+printList (Term tl)
+{
+  Termlist temp = (Termlist) tl->stype;
+  while (temp != NULL)
+    {
+      printf ("%s,", temp->term->left.symb->text);
+      temp = temp->next;
+    }
+  printf ("\n");
 }
 
 int
@@ -114,7 +116,7 @@ checkTypeTerm (const Term tvar)
     {
       // Non-instantiated terms are fine.
       if (tvar->subst != NULL)
-      {
+	{
 	  if (!isTypelistGeneric (tvar->stype))
 	    {
 	      // So there is a specific (non-ticket) type, and the var is instantiated, match mode 0 or 1
@@ -128,7 +130,7 @@ checkTypeTerm (const Term tvar)
 		  reportBadSubst (tvar, tsubst);
 		  return false;
 		}
-	    else
+	      else
 		{
 		  // It is a leaf
 		  if (switches.match == 0)
@@ -138,26 +140,29 @@ checkTypeTerm (const Term tvar)
 		      Termlist tl;
 
 		      /*tl = tvar->stype; (old code)
-		      while (tl != NULL)
-			  {
-			  if (inTermlist (tsubst->stype, tl->term))
-			    {
-			      // One type matches
-			      return true;
-			    }
-			  tl = tl->next;
-			  }
-			  */
+		         while (tl != NULL)
+		         {
+		         if (inTermlist (tsubst->stype, tl->term))
+		         {
+		         // One type matches
+		         return true;
+		         }
+		         tl = tl->next;
+		         }
+		       */
 		      //new code
-		      tl = ((Termlist)tsubst->stype)->term->stype;
-//		      printf("for subst %s(%s) and var %s(%s)\n",tvar->subst->left.symb->text, ((Termlist)tvar->subst->stype)->term->left.symb->text,
-//		    		  tvar->left.symb->text, ((Termlist)tvar->stype)->term->left.symb->text);
-//		      printList(tl);
-		      if(isTermEqual(((Termlist)tsubst->stype)->term, ((Termlist)tvar->stype)->term)
-		    		  ||inTermlist(tl,((Termlist)tvar->stype)->term)){
-//			   	    printf("Matching for var %s and subst %s\n", tvar->left.symb->text,tvar->subst->left.symb->text);
-		    		  return true;
-		      }
+		      tl = ((Termlist) tsubst->stype)->term->stype;
+//                    printf("for subst %s(%s) and var %s(%s)\n",tvar->subst->left.symb->text, ((Termlist)tvar->subst->stype)->term->left.symb->text,
+//                                tvar->left.symb->text, ((Termlist)tvar->stype)->term->left.symb->text);
+//                    printList(tl);
+		      if (isTermEqual
+			  (((Termlist) tsubst->stype)->term,
+			   ((Termlist) tvar->stype)->term)
+			  || inTermlist (tl, ((Termlist) tvar->stype)->term))
+			{
+//                                  printf("Matching for var %s and subst %s\n", tvar->left.symb->text,tvar->subst->left.symb->text);
+			  return true;
+			}
 		      // No type matches.
 		      reportBadSubst (tvar, tsubst);
 		      return false;

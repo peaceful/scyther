@@ -12,6 +12,6 @@
 #include "absfunc.h"
 #include "safecheck.h"
 #include "advfunc.h"
-void redabsInit(System mysys);
-int redundancyAbstraction();
+void redabsInit (System mysys);
+int redundancyAbstraction ();
 #endif /* REDABST_H_ */

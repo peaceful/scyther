@@ -167,9 +167,9 @@ inTermlist (Termlist tl, const Term term)
   while (tl != NULL)
     {
       if (isTermEqual (tl->term, term))
-      {
-    	  return 1;
-      }
+	{
+	  return 1;
+	}
       tl = tl->next;
     }
   return 0;
@@ -311,7 +311,7 @@ termlistConcat (Termlist tl1, Termlist tl2)
   while (scan->next != NULL)
     scan = scan->next;
   scan->next = tl2;
-  tl2->prev=scan;
+  tl2->prev = scan;
   return tl1;
 }
 
@@ -362,7 +362,8 @@ termlistDelTerm (Termlist tl)
   else
     {
       newhead = tl->next;
-      if(newhead) newhead->prev=NULL;
+      if (newhead)
+	newhead->prev = NULL;
     }
   if (tl->next != NULL)
     (tl->next)->prev = tl->prev;

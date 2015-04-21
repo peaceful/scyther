@@ -26,16 +26,16 @@
 
 struct cryptstr
 {
- int type;
- Term info;// it is the key (for MAC, encryptions) and NULL otherwise
+  int type;
+  Term info;			// it is the key (for MAC, encryptions) and NULL otherwise
 };
 
 struct cryptolabel
 {
-	int auth_crypt;
-	int sec_crypt;
+  int auth_crypt;
+  int sec_crypt;
 };
-void heuristicInit(System mysys);
-System abstractSystem();
-int abstractionSucceed();
-void heuristicDone();
+void heuristicInit (System mysys);
+System abstractSystem ();
+int abstractionSucceed ();
+void heuristicDone ();

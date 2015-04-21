@@ -11,5 +11,5 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-long timevaldiff(struct timeval *starttime, struct timeval *finishtime);
+long timevaldiff (struct timeval *starttime, struct timeval *finishtime);
 #endif /* TIME_H_ */
