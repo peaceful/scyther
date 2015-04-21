@@ -44,8 +44,8 @@
  * ---------------------------------------------------------------
  */
 
-//extern Protocol INTRUDER;	//!< The intruder protocol
-//extern Role I_M;		//!< special role; precedes all other events always
+//extern Protocol INTRUDER;     //!< The intruder protocol
+//extern Role I_M;              //!< special role; precedes all other events always
 
 /*
  * Globals
@@ -136,17 +136,17 @@ void
 dependDone (const System sys)
 {
   //error when integrate spurious attack checking, so close it for now
-	/*
-  if (currentdepgraph != NULL)
-    {
-      globalError++;
-      eprintf ("\n\n");
-      dependPrint ();
-      globalError--;
-      error
-	("depgraph stack (depend.c) not empty at dependDone, bad iteration?");
-    }
-    */
+  /*
+     if (currentdepgraph != NULL)
+     {
+     globalError++;
+     eprintf ("\n\n");
+     dependPrint ();
+     globalError--;
+     error
+     ("depgraph stack (depend.c) not empty at dependDone, bad iteration?");
+     }
+   */
 }
 
 /*

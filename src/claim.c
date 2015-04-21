@@ -1149,7 +1149,8 @@ count_false_claim (const System sys)
 }
 
 //! Check properties
-int property_check (const System sys)
+int
+property_check (const System sys)
 {
   int flag;
   int cost;
@@ -1171,19 +1172,19 @@ int property_check (const System sys)
       // Cheapest attack
       attack_leastcost = cost;
       if (switches.output == PROOF)
-      {
-    	  indentPrint ();
-    	  eprintf ("New cheaper attack found with cost %i.\n", cost);
-      }
+	{
+	  indentPrint ();
+	  eprintf ("New cheaper attack found with cost %i.\n", cost);
+	}
       //store attack in some structure for re-construct attack in the original model
-      if(!attack_checking)
-      {
-    		//eprintf("abstract runs:\n");
-    		//printRuns(sys);
-    		//eprintf("\n");
-     	  copyRuns(sys);
-      }
-     }
+      if (!attack_checking)
+	{
+	  //eprintf("abstract runs:\n");
+	  //printRuns(sys);
+	  //eprintf("\n");
+	  copyRuns (sys);
+	}
+    }
   return flag;
 }
 

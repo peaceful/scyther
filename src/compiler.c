@@ -50,7 +50,7 @@
 static System sys;
 static Tac tac_root;
 Eqlist eql;
-int nilfree;//0:nil-free, 1: initially not nil-free,2: permanently not nil-free
+int nilfree;			//0:nil-free, 1: initially not nil-free,2: permanently not nil-free
 /*
  * Declaration from system.c
  */
@@ -76,7 +76,7 @@ void roleKnows (Tac tc);
  */
 
 //! Levels of scope: global, protocol, role
-#define MAXLEVELS 4 //change 3 to 4
+#define MAXLEVELS 4		//change 3 to 4
 #define CLAUSENUM 30
 static Termlist leveltl[MAXLEVELS];
 static Termlist *clauseVar;
@@ -94,18 +94,18 @@ compilerInit (const System mysys)
 
   /* transfer to global static variable */
   sys = mysys;
-  clauseVar = malloc(CLAUSENUM * sizeof(Termlist));
+  clauseVar = malloc (CLAUSENUM * sizeof (Termlist));
   /* init levels */
   for (i = 0; i < MAXLEVELS; i++)
     leveltl[i] = NULL;
   /* init clause variables */
-  for(i=0; i<CLAUSENUM; i++)
-	  clauseVar[i]=NULL;
+  for (i = 0; i < CLAUSENUM; i++)
+    clauseVar[i] = NULL;
   level = -1;
   levelInit ();
   /* create special terms */
   specialTermInit (sys);
-  leveltl[MAXLEVELS-1] = termlistAdd(leveltl[MAXLEVELS-1], TERM_NIL);
+  leveltl[MAXLEVELS - 1] = termlistAdd (leveltl[MAXLEVELS - 1], TERM_NIL);
 }
 
 //! Make a global constant
@@ -159,9 +159,12 @@ compute_recv_variables (const Role r)
  *\sa oki_nisynch
  */
 
-void checkingFuncspec(){
-	int checkPatterndisjointness = checkPatternDisjointness();
-	if(!checkPatterndisjointness) error("The function specification is not pattern-disjoint\n");
+void
+checkingFuncspec ()
+{
+  int checkPatterndisjointness = checkPatternDisjointness ();
+  if (!checkPatterndisjointness)
+    error ("The function specification is not pattern-disjoint\n");
 }
 
 void
@@ -169,15 +172,15 @@ compile (Tac tc, int maxrunsset)
 {
   /* Init globals */
   tac_root = tc;
-  nilfree=0;
-  eql=NULL;
+  nilfree = 0;
+  eql = NULL;
   /* process the tac */
   tacProcess (tac_root);
   /* do some tests */
   /* Preprocess the result */
   preprocess (sys);
   /*do some checking for function specification */
-  checkingFuncspec();
+  checkingFuncspec ();
   /* cleanup */
   levelDone ();
 }
@@ -231,7 +234,8 @@ levelDeclare (Symbol s, int isVar, int level)
       if (isVar)
 	{
 	  t = makeTermType (VARIABLE, s, -(level + 1));
-	  if(level<MAXLEVELS-1) sys->variables = termlistAdd (sys->variables, t);
+	  if (level < MAXLEVELS - 1)
+	    sys->variables = termlistAdd (sys->variables, t);
 	}
       else
 	{
@@ -263,22 +267,26 @@ symbolDeclare (Symbol s, int isVar)
   return levelDeclare (s, isVar, level);
 }
 
-int clauseVarFind(Symbol var, int clauseNum){
-	  Termlist tl;
- int i;
- for(i=0; i<clauseNum;i++){
-	  tl = clauseVar[i];
-	  while (tl != NULL)
+int
+clauseVarFind (Symbol var, int clauseNum)
+{
+  Termlist tl;
+  int i;
+  for (i = 0; i < clauseNum; i++)
+    {
+      tl = clauseVar[i];
+      while (tl != NULL)
+	{
+	  if (TermSymb (tl->term) == var)
 	    {
-    	  if (TermSymb (tl->term) == var)
-	    	  {
-	    		  return true;
-	    	  }
-	      tl = tl->next;
+	      return true;
 	    }
- 	 }
- return false;
+	  tl = tl->next;
+	}
+    }
+  return false;
 }
+
 Term
 levelFind (Symbol s, int level)
 {
@@ -302,17 +310,17 @@ levelFind (Symbol s, int level)
 Term
 symbolFindForPattern (Symbol s)
 {
-	  int i;
-	  Term t;
+  int i;
+  Term t;
 
-	  i = MAXLEVELS-1;
-	  while (i >= 0)
-	    {
-	      t = levelFind (s, i);
-	      if (t != NULL)
-		return t;
-	      i--;
-	    }
+  i = MAXLEVELS - 1;
+  while (i >= 0)
+    {
+      t = levelFind (s, i);
+      if (t != NULL)
+	return t;
+      i--;
+    }
   return NULL;
 }
 
@@ -393,20 +401,23 @@ defineUsertype (Tac tcdu)
     }
 }
 
-void essentialTerms(Tac tc)
+void
+essentialTerms (Tac tc)
 {
-	while(tc!=NULL)
+  while (tc != NULL)
+    {
+      Term t = levelFind (tc->t1.sym, 2);
+      if (t == NULL)
 	{
-	    Term  t = levelFind (tc->t1.sym, 2);
-	    if (t == NULL)
-		{
-		  /* not declared, that is unacceptable. */
-		  error ("Undeclared value/variable on line %i.", tc->lineno);
-		}
-	    else t->e_sec= t->e_auth =1;
-		tc = tc->next;
+	  /* not declared, that is unacceptable. */
+	  error ("Undeclared value/variable on line %i.", tc->lineno);
 	}
+      else
+	t->e_sec = t->e_auth = 1;
+      tc = tc->next;
+    }
 }
+
 //! Declare a variable (constant) at the current level
 void
 levelTacDeclaration (Tac tc, int isVar)
@@ -942,11 +953,11 @@ commEvent (int event, Tac tc)
 	    }
 	}
       label = intTermPrefix (n, thisRole->nameterm);
-     }
+    }
   else
     {
       label = levelFind (tc->t1.sym, level - 1);
-    if (label == NULL)
+      if (label == NULL)
 	{
 	  /* effectively, labels are bound to the protocol */
 	  level--;
@@ -1242,7 +1253,7 @@ normalDeclaration (Tac tc)
       hashfunctions (tc);
       break;
     case TAC_ESSENTIAL:
-      essentialTerms(tc->t1.tac);
+      essentialTerms (tc->t1.tac);
       break;
     default:
       /* abort with false */
@@ -1356,7 +1367,7 @@ roleCompile (Term nameterm, Tac tc)
 	  case TAC_KNOWS:
 	    roleKnows (tc);
 	    break;
-	  default: //parse declaration (variables, fresh values, constants)
+	  default:		//parse declaration (variables, fresh values, constants)
 	    if (!normalDeclaration (tc))
 	      {
 		globalError++;
@@ -1610,6 +1621,7 @@ protocolCompile (Symbol prots, Tac tc, Tac tcroles)
 
   levelDone ();
 }
+
 /*
 Termlist defineUserSubtype(Tac stype, Termlist tl){
 	Tac tc = stype->t1.tac;
@@ -1671,22 +1683,28 @@ void computeSubtypingClosureForList(Termlist tl){
 }
 */
 
-void typingDeclare(Tac t){
-	Term type = tacTerm(t->t2.tac);
-	Tac varlist = t->t1.tac;
-	while(varlist!=NULL){
-		Term var = levelDeclare(varlist->t1.sym,VARIABLE,MAXLEVELS-1);
-		var->stype=NULL;
-		var->stype = termlistAdd(var->stype,type); //override if it is already declared
-		varlist = varlist->next;
-	}
+void
+typingDeclare (Tac t)
+{
+  Term type = tacTerm (t->t2.tac);
+  Tac varlist = t->t1.tac;
+  while (varlist != NULL)
+    {
+      Term var = levelDeclare (varlist->t1.sym, VARIABLE, MAXLEVELS - 1);
+      var->stype = NULL;
+      var->stype = termlistAdd (var->stype, type);	//override if it is already declared
+      varlist = varlist->next;
+    }
 }
 
-void compileEnvironment(Tac t){
-	while(t!=NULL){
-		typingDeclare(t);
-		t = t->next;
-	}
+void
+compileEnvironment (Tac t)
+{
+  while (t != NULL)
+    {
+      typingDeclare (t);
+      t = t->next;
+    }
 }
 
 //version of tacTerm for pattern variables
@@ -1698,90 +1716,100 @@ tacTermForPattern (Tac tc, int isLeft, int index)
   switch (tc->op)
     {
     case TAC_ABSTRACT:
-    	t = tacTermForPattern(tc->t1.tac, isLeft,index);
-    	if(!isLeft) t->abst = 1;
-    	return t;
+      t = tacTermForPattern (tc->t1.tac, isLeft, index);
+      if (!isLeft)
+	t->abst = 1;
+      return t;
     case TAC_FCALL:
-      t = makeTermEncrypt (tacTermForPattern (tc->t1.tac, isLeft,index),
-    		               tacTermForPattern (tc->t2.tac,isLeft,index));
+      t = makeTermEncrypt (tacTermForPattern (tc->t1.tac, isLeft, index),
+			   tacTermForPattern (tc->t2.tac, isLeft, index));
       t->helper.fcall = true;
       return t;
     case TAC_ENCRYPT:
-      return makeTermEncrypt (tacTermForPattern (tc->t1.tac, isLeft,index),
-    		                  tacTermForPattern (tc->t2.tac, isLeft,index));
+      return makeTermEncrypt (tacTermForPattern (tc->t1.tac, isLeft, index),
+			      tacTermForPattern (tc->t2.tac, isLeft, index));
     case TAC_TUPLE:
-      return makeTermTuple (tacTermForPattern (tc->t1.tac, isLeft,index),
-    		                tacTermForPattern (tc->t2.tac, isLeft,index));
+      return makeTermTuple (tacTermForPattern (tc->t1.tac, isLeft, index),
+			    tacTermForPattern (tc->t2.tac, isLeft, index));
     case TAC_STRING:
       {
-    	 if(clauseVarFind(tc->t1.sym, index))
-    		 	 {
-    	    		 globalError++;
-    	    		 eprintf ("error: [%i] the variable ", tc->lineno);
-    	    		 symbolPrint (tc->t1.sym);
-    	    		 eprintf(" has been used in the previous clause");
-    	    		 errorTac (tc->lineno);
-    		 	 }
-    	 Term t = symbolFindForPattern (tc->t1.sym);
-    	 if (t == NULL)
-    	 {
-    		 globalError++;
-    		 eprintf ("error: [%i] undeclared variable ", tc->lineno);
-    		 symbolPrint (tc->t1.sym);
-    		 errorTac (tc->lineno);
-    	 }
-    	 else if(t->type==VARIABLE){
-    		 if(isLeft&&inTermlist(clauseVar[index],t))
-    			 error("the patten in line %d is not linear (each variable occurs exactly once",tc->lineno);
-    		 clauseVar[index] = termlistAdd(clauseVar[index],t);
-    	 }
-    	 return t;
+	if (clauseVarFind (tc->t1.sym, index))
+	  {
+	    globalError++;
+	    eprintf ("error: [%i] the variable ", tc->lineno);
+	    symbolPrint (tc->t1.sym);
+	    eprintf (" has been used in the previous clause");
+	    errorTac (tc->lineno);
+	  }
+	Term t = symbolFindForPattern (tc->t1.sym);
+	if (t == NULL)
+	  {
+	    globalError++;
+	    eprintf ("error: [%i] undeclared variable ", tc->lineno);
+	    symbolPrint (tc->t1.sym);
+	    errorTac (tc->lineno);
+	  }
+	else if (t->type == VARIABLE)
+	  {
+	    if (isLeft && inTermlist (clauseVar[index], t))
+	      error
+		("the patten in line %d is not linear (each variable occurs exactly once",
+		 tc->lineno);
+	    clauseVar[index] = termlistAdd (clauseVar[index], t);
+	  }
+	return t;
       }
     default:
       return NULL;
     }
 }
 
-void equationDeclare(Tac t, int index){
-	Term left = tacTermForPattern(t->t1.tac, 1, index);
-	Term right = tacTermForPattern(t->t2.tac, 0, index);
-	if(!checkWelldefinednessForEquation(left,right)){
-		error("The equation is not well-defined at line %d",t->lineno);
-	}
-	Equation eq = makeEquation();
-	if(t->op==TAC_PERSISTENT_EQUATION)
-	{
-		eq->type=USER_DEFINED_PERSISTENT;
-		if(isTermEqual(right,TERM_NIL))
-			nilfree=2;
-	}
-	else
-	{
-		eq->type=USER_DEFINED_LINEAR;
-		if(isTermEqual(right,TERM_NIL))
-			nilfree=1;
-	}
-	eq->left = left;
-	eq->right=right;
-	eq->line=t->lineno;
-	eql = equationlistAdd(eql, eq);
+void
+equationDeclare (Tac t, int index)
+{
+  Term left = tacTermForPattern (t->t1.tac, 1, index);
+  Term right = tacTermForPattern (t->t2.tac, 0, index);
+  if (!checkWelldefinednessForEquation (left, right))
+    {
+      error ("The equation is not well-defined at line %d", t->lineno);
+    }
+  Equation eq = makeEquation ();
+  if (t->op == TAC_PERSISTENT_EQUATION)
+    {
+      eq->type = USER_DEFINED_PERSISTENT;
+      if (isTermEqual (right, TERM_NIL))
+	nilfree = 2;
+    }
+  else
+    {
+      eq->type = USER_DEFINED_LINEAR;
+      if (isTermEqual (right, TERM_NIL))
+	nilfree = 1;
+    }
+  eq->left = left;
+  eq->right = right;
+  eq->line = t->lineno;
+  eql = equationlistAdd (eql, eq);
 }
 
-void compileEquations(Tac t){
-	int index = 0;
-	while(t!=NULL){
-		equationDeclare(t,index);
-		t = t->next;
-		index++;
-	}
-	free(clauseVar);
+void
+compileEquations (Tac t)
+{
+  int index = 0;
+  while (t != NULL)
+    {
+      equationDeclare (t, index);
+      t = t->next;
+      index++;
+    }
+  free (clauseVar);
 }
 
 
 void
 tacProcess (Tac tc)
 {
-//	  Termlist newtl=NULL;
+//        Termlist newtl=NULL;
   while (tc != NULL)
     {
       switch (tc->op)
@@ -1799,15 +1827,15 @@ tacProcess (Tac tc)
 	case TAC_USERTYPE:
 	  defineUsertype (tc);
 	  break;
-	//case TAC_USER_SUBTYPE:
-	//	newtl=defineUserSubtype(tc, newtl);
-	//  break;
+	  //case TAC_USER_SUBTYPE:
+	  //      newtl=defineUserSubtype(tc, newtl);
+	  //  break;
 	case TAC_ENV:
-		compileEnvironment(tc->t1.tac);
-		break;
+	  compileEnvironment (tc->t1.tac);
+	  break;
 	case TAC_EQUATIONS:
-		compileEquations(tc->t1.tac);
-		break;
+	  compileEquations (tc->t1.tac);
+	  break;
 
 	default:
 	  if (!normalDeclaration (tc))
@@ -1842,16 +1870,18 @@ tacTerm (Tac tc)
       return makeTermTuple (tacTerm (tc->t1.tac), tacTerm (tc->t2.tac));
     case TAC_STRING:
       {
-	Term t ;
+	Term t;
 	//we check whether a variable used by the protocol has been used before by the abstraction
 	//if it is the case, we announce an error.
-	if(levelFind(tc->t1.sym,MAXLEVELS-1)){
+	if (levelFind (tc->t1.sym, MAXLEVELS - 1))
+	  {
 	    globalError++;
-	    eprintf ("error: [%i] the variable %s should not occur in the environment",
-	    		tc->lineno, tc->t1.sym->text);
+	    eprintf
+	      ("error: [%i] the variable %s should not occur in the environment",
+	       tc->lineno, tc->t1.sym->text);
 	    errorTac (tc->lineno);
-	}
-	t= symbolFind (tc->t1.sym);
+	  }
+	t = symbolFind (tc->t1.sym);
 	if (t == NULL)
 	  {
 	    globalError++;
@@ -2701,9 +2731,9 @@ checkLabelMatchThis (const System sys, const Protocol p, const Role recvrole,
       sendrole = sendrole->next;
     }
 
-   //How many did we find?
-   //* 1 is normal, more is interesting (branching?)
-   //* 0 is not good, nobody will send it
+  //How many did we find?
+  //* 1 is normal, more is interesting (branching?)
+  //* 0 is not good, nobody will send it
   if (found == 0)
     {
       globalError++;

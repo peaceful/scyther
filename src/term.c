@@ -79,9 +79,9 @@ Term
 makeTerm ()
 {
   Term t = (Term) malloc (sizeof (struct term));
-  t->abst=0;
-  t->e_sec=t->e_auth=t->e_contain=UNKNOWN;
-  t->rolename=NULL;
+  t->abst = 0;
+  t->e_sec = t->e_auth = t->e_contain = UNKNOWN;
+  t->rolename = NULL;
   return t;
 }
 
@@ -559,15 +559,15 @@ termDuplicateDeep (const Term term)
   if (!realTermLeaf (term))
     {
       if (realTermEncrypt (term))
-      {
-    	  TermOp (newterm) = termDuplicateDeep (TermOp (term));
-    	  TermKey (newterm) = termDuplicateDeep (TermKey (term));
-      }
+	{
+	  TermOp (newterm) = termDuplicateDeep (TermOp (term));
+	  TermKey (newterm) = termDuplicateDeep (TermKey (term));
+	}
       else
-      {
-    	  TermOp1 (newterm) = termDuplicateDeep (TermOp1 (term));
-    	  TermOp2 (newterm) = termDuplicateDeep (TermOp2 (term));
-      }
+	{
+	  TermOp1 (newterm) = termDuplicateDeep (TermOp1 (term));
+	  TermOp2 (newterm) = termDuplicateDeep (TermOp2 (term));
+	}
     }
   return newterm;
 }
@@ -656,7 +656,7 @@ termDelete (const Term term)
 	  termDelete (TermOp1 (term));
 	  termDelete (TermOp2 (term));
 	}
-      termlistDestroy((Termlist)term->subst);
+      termlistDestroy ((Termlist) term->subst);
       free (term);
     }
 }

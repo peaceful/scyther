@@ -210,7 +210,7 @@ roledefInit (int type, Term label, Term from, Term to, Term msg, Claimlist cl)
     newEvent->bound = 1;	// other stuff does not need to be bound
   newEvent->next = NULL;
   newEvent->lineno = 0;
-  newEvent->absMess=NULL;
+  newEvent->absMess = NULL;
   return newEvent;
 }
 
