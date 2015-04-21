@@ -12,10 +12,12 @@
 #include "typebasedabs.h"
 #include "termfunc.h"
 #endif /* ABSTRACTION_H_ */
-int trivialEquationlist(Eqlist eql);
-int tryAbstractProt1(int (*safecheck)(Protocol), Term (*absfunc)(Term),Protocol p);
-int tryAbstractProt(int (*safecheck)(Protocol),Term (*absfunc)(Term),System sys);
-void resetAbsForProtocol(Protocol p);
-void resetAbs(System sys);
-System performAbstraction1(System sys);
-System performAbstraction(System abssys, System sys);
+int trivialEquationlist (Eqlist eql);
+int tryAbstractProt1 (int (*safecheck) (Protocol), Term (*absfunc) (Term),
+		      Protocol p);
+int tryAbstractProt (int (*safecheck) (Protocol), Term (*absfunc) (Term),
+		     System sys);
+void resetAbsForProtocol (Protocol p);
+void resetAbs (System sys);
+System performAbstraction1 (System sys);
+System performAbstraction (System abssys, System sys);

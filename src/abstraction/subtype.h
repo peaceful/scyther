@@ -3,11 +3,11 @@
 #include "../termlist.h"
 #include "../specialterm.h"
 
-int isSubtype(Term, Term);
-Term subTypeInSubterm(Term sttype, Term type);
-Term getTermType(Term);
-Term upperCommonSuptype(Term, Term);
-int isComparable(Term typ1, Term typ2);
-int compareTypelist(Term type, Termlist termlist);
-int compareTypeTermlist(Term type, Termlist termlist);
-Term mostGeneralType(Term, Term);
+int isSubtype (Term, Term);
+Term subTypeInSubterm (Term sttype, Term type);
+Term getTermType (Term);
+Term upperCommonSuptype (Term, Term);
+int isComparable (Term typ1, Term typ2);
+int compareTypelist (Term type, Termlist termlist);
+int compareTypeTermlist (Term type, Termlist termlist);
+Term mostGeneralType (Term, Term);

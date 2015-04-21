@@ -16,4 +16,4 @@
 #include "time.h"
 #endif /* ABSYS_H_ */
 
-void runVerification(void (*MC_single)(const System));
+void runVerification (void (*MC_single) (const System));

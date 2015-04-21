@@ -11,10 +11,10 @@
 #include "typebasedabs.h"
 #include "../termlist.h"
 
-Equation createTicketHomomorphicPatForHash(Term hashfunc);
-Term createPatFromType(Term);
-Term createTermFromPatList(Termlist);
-Equation createHomoEquationFromType(Term);
-Term makeHomomorphic(Term t);
-Term makeHomomorphicTuple(Term t);
+Equation createTicketHomomorphicPatForHash (Term hashfunc);
+Term createPatFromType (Term);
+Term createTermFromPatList (Termlist);
+Equation createHomoEquationFromType (Term);
+Term makeHomomorphic (Term t);
+Term makeHomomorphicTuple (Term t);
 #endif /* PATFUNC_H_ */

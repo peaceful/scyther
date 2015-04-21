@@ -13,6 +13,9 @@
 #include "../list.h"
 #include "../system.h"
 
-int checkInjectivenessForEvent(Term (*absfunc) (Term),Protocol p,List evPhiPlus, int error, void (*handle)(Term, Term));
-int checkNoNilEvent(Term (*absfunc) (Term),List evPhi, int error, void (*handle)(Term));
+int checkInjectivenessForEvent (Term (*absfunc) (Term), Protocol p,
+				List evPhiPlus, int error,
+				void (*handle) (Term, Term));
+int checkNoNilEvent (Term (*absfunc) (Term), List evPhi, int error,
+		     void (*handle) (Term));
 #endif /* SAFECHECK_H_ */
