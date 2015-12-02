@@ -641,6 +641,7 @@ switcher (const int process, int index, int commandline)
 	}
     }
 
+
   /* ==================
    *  Bounding options
    */
@@ -885,21 +886,20 @@ switcher (const int process, int index, int commandline)
 	}
     }
 
-  if (detect (' ', "abstraction-method", 1))
+  //for abstraction, currently there is only one method
+  if (detect (' ', "abstract", 0))
     {
       if (!process)
 	{
-	  if (switches.expert)
+	 // if (switches.expert)
 	    {
-	      /* Not working yet
-	         helptext ("    --abstraction-method=<int>",
-	         "Abstraction method used. Default: 0 (disabled)");
-	       */
+	         helptext ("--abstract",
+	         "Abstraction method used. Default: disabled");
 	    }
 	}
       else
 	{
-	  switches.abstractionMethod = integer_argument ();
+	  switches.abstractionMethod = true;
 	  return index;
 	}
     }

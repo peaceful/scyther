@@ -307,10 +307,10 @@ buildAbstractionList ()
       if (abstractionSucceed ())
 	{
 	  addProt2Stack (abssys);
-	  eprintf ("Abstraction number %d:\n", ++abstcount);
-	  protocolsPrint (abssys->protocols);
-	  eprintf ("\n");
-	  //abstcount++;
+	  //eprintf ("Abstraction number %d:\n", ++abstcount);
+	  //protocolsPrint (abssys->protocols);
+	  //eprintf ("\n");
+	  abstcount++;
 	}
       else
 	break;
@@ -454,7 +454,7 @@ isRemovedClaim (Term label)
 }
 
 void
-removeVerifiedClaims ()
+removeClaims ()
 {
   Termlist newClaims = NULL;
   Termlist labels;
@@ -470,6 +470,11 @@ removeVerifiedClaims ()
 void
 runVerification (void (*MC_single) (const System))
 {
+  if(!switches.abstractionMethod)
+  {
+	  MC_single(original);
+	  return;
+  }
   abssysInit ();
   struct timeval start, finish;
   long msec;
@@ -477,7 +482,7 @@ runVerification (void (*MC_single) (const System))
   buildAbstractionList ();
   gettimeofday (&finish, NULL);
   msec = timevaldiff (&start, &finish);
-  eprintf ("Constructing abstractions in milliseconds: %d\n", msec);
+  eprintf ("Abstractions were generated in milliseconds: %d\n", msec);
   System abssys;
   List abst = absList;
   while (claims != NULL && abstcount >= 0)
@@ -485,26 +490,25 @@ runVerification (void (*MC_single) (const System))
       abssys = (System) abst->data;
       //systemStart(abssys);
       //abssys->traceKnow[0] = abssys->know;
+      eprintf("Analyzing the top protocol model in the stack... \n");
       MC_single (abssys);
       //eprintf("Abstraction number %d: \n", abstcount);
       if (verified != NULL || falsified != NULL)
-	{
-	  if (verified != NULL)
-	    {
-	      if (abstcount)
-		{
-		  //eprintf("Abstraction number %d:\n", abstcount);
-		  //protocolsPrint(abssys->protocols);
-		  //eprintf("\n");
-		  eprintf ("Properties verified at abstraction number %d: \n",
-			   abstcount);
-		}
-	      else
-		eprintf ("Properties verified at the original protocol:\n");
-	      outputResult (abssys);
-	    }
-	  removeVerifiedClaims ();
-	}
+      {
+		  if (verified != NULL)
+			{
+			  eprintf ("Properties verified:\n");
+			  outputResult (abssys);
+			}
+		  if (abstcount)
+		  {
+			  eprintf("\nThe abstract model number %d was analyzed: \n", abstcount);
+			  protocolsPrint(abssys->protocols);
+			  eprintf("\n");
+		  }
+		  else eprintf ("\nThe original protocol was analyzed");
+		  removeClaims ();
+      }
       abstcount--;
       freeClaims ();
       verified = falsified = outputClaims = falsifiedClaims = NULL;

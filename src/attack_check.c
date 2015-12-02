@@ -26,6 +26,7 @@ initModelCheck (System sys)
   systemRuns (sys);		// init runs data
 }
 
+/*
 void
 printRuns (const System sys)
 {
@@ -42,7 +43,7 @@ printRuns (const System sys)
       eprintf ("\n");
     }
 }
-
+*/
 
 //copy a run (from abstract attack)
 struct runinfo

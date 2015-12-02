@@ -85,8 +85,6 @@ static int indentDepthChanges;
 static FILE *attack_stream;
 extern System original;
 int attack_checking;
-int tracelength;
-int regular_runs;
 /*
  * Forward declarations
  */
@@ -97,81 +95,76 @@ int iterate ();
  * Program code
  */
 
-void
-initGlobals ()
+void initGlobals()
 {
-  term_rolelocals_are_variables ();
-  indentDepth = 0;
-  prevIndentDepth = 0;
-  indentDepthChanges = 0;
+	term_rolelocals_are_variables ();
+	indentDepth = 0;
+	prevIndentDepth = 0;
+	indentDepthChanges = 0;
 }
-
 //! Init Arachne engine
-void
-arachnePrepare ()
+void arachnePrepare()
 {
-  Roledef rd;
+	  Roledef rd;
 
-  void add_event (int event, Term message)
-  {
-    rd = roledefAdd (rd, event, NULL, NULL, NULL, message, NULL);
-  }
+	  void add_event (int event, Term message)
+	  {
+	    rd = roledefAdd (rd, event, NULL, NULL, NULL, message, NULL);
+	  }
 
-  Role add_role (const char *rolenamestring)
-  {
-    Role r;
-    Term rolename;
+	  Role add_role (const char *rolenamestring)
+	  {
+	    Role r;
+	    Term rolename;
 
-    rolename = makeGlobalConstant (rolenamestring);
-    r = roleCreate (rolename);
-    r->roledef = rd;
-    rd = NULL;
-    r->next = INTRUDER->roles;
-    INTRUDER->roles = r;
-    // compute_role_variables (sys, INTRUDER, r);
-    return r;
-  }
+	    rolename = makeGlobalConstant (rolenamestring);
+	    r = roleCreate (rolename);
+	    r->roledef = rd;
+	    rd = NULL;
+	    r->next = INTRUDER->roles;
+	    INTRUDER->roles = r;
+	    // compute_role_variables (sys, INTRUDER, r);
+	    return r;
+	  }
 
 	  /**
 	   * Very important: turn role terms that are local to a run, into variables.
 	   */
-  //term_rolelocals_are_variables ();
+	  //term_rolelocals_are_variables ();
 
-  /*
-   * Add intruder protocol roles
-   */
+	  /*
+	   * Add intruder protocol roles
+	   */
 
-  INTRUDER = protocolCreate (makeGlobalConstant (" INTRUDER "));
+	  INTRUDER = protocolCreate (makeGlobalConstant (" INTRUDER "));
 
-  // Initially empty roledef
-  rd = NULL;
+	  // Initially empty roledef
+	  rd = NULL;
 
-  add_event (SEND, NULL);
-  I_M = add_role ("I_M: Atomic message");
+	  add_event (SEND, NULL);
+	  I_M = add_role ("I_M: Atomic message");
 
-  add_event (RECV, NULL);
-  add_event (RECV, NULL);
-  add_event (SEND, NULL);
-  I_RRS = add_role ("I_E: Encrypt");
+	  add_event (RECV, NULL);
+	  add_event (RECV, NULL);
+	  add_event (SEND, NULL);
+	  I_RRS = add_role ("I_E: Encrypt");
 
-  add_event (RECV, NULL);
-  add_event (RECV, NULL);
-  add_event (SEND, NULL);
-  I_RRSD = add_role ("I_D: Decrypt");
-  /*
-     indentDepth = 0;
-     prevIndentDepth = 0;
-     indentDepthChanges = 0;
-   */
-  initGlobals ();
+	  add_event (RECV, NULL);
+	  add_event (RECV, NULL);
+	  add_event (SEND, NULL);
+	  I_RRSD = add_role ("I_D: Decrypt");
+	  /*
+	  indentDepth = 0;
+	  prevIndentDepth = 0;
+	  indentDepthChanges = 0;
+	  */
+	  initGlobals();
 }
 
-void
-setArachne (const System mysys)
+void setArachne(const System mysys)
 {
-  sys = mysys;
+	sys = mysys;
 }
-
 void
 arachneInit (const System mysys)
 {
@@ -642,7 +635,7 @@ iterate_role_events (int (*func) ())
       r = p->roles;
       while (r != NULL)
 	{
-	  Roledef rd;
+ 	  Roledef rd;
 	  int index;
 
 	  rd = r->roledef;
@@ -2315,38 +2308,55 @@ iterate_buffer_attacks (void)
     }
 }
 
-void
-initClaimTest (Claimlist cl, int *newruns, int *newgoals)
+void initClaimTest(Claimlist cl, int *newruns, int* newgoals)
 {
-  Protocol p;
-  Role r;
-  p = (Protocol) cl->protocol;
-  r = (Role) cl->role;
-  if (switches.output == PROOF)
-    {
-      indentPrint ();
-      eprintf ("Testing Claim ");
-      termPrint (cl->type);
-      eprintf (" from ");
-      termPrint (p->nameterm);
-      eprintf (", ");
-      termPrint (r->nameterm);
-      eprintf (" at index %i.\n", cl->ev);
-    }
-  indentDepth++;
-  int run = semiRunCreate (p, r);
-  (*newruns)++;
-  proof_suppose_run (run, 0, cl->ev + 1);
-  *newgoals = add_recv_goals (run, 0, cl->ev + 1);
+	  Protocol p;
+	  Role r;
+	  p = (Protocol) cl->protocol;
+	  r = (Role) cl->role;
+	  if (switches.output == PROOF)
+	    {
+	      indentPrint ();
+	      eprintf ("Testing Claim ");
+	      termPrint (cl->type);
+	      eprintf (" from ");
+	      termPrint (p->nameterm);
+	      eprintf (", ");
+	      termPrint (r->nameterm);
+	      eprintf (" at index %i.\n", cl->ev);
+	    }
+	  indentDepth++;
+	  int run = semiRunCreate (p, r);
+	  (*newruns)++;
+ 	  proof_suppose_run (run, 0, cl->ev + 1);
+	  *newgoals = add_recv_goals (run, 0, cl->ev + 1);
 }
 
 
+void printRuns(const System sys)
+{
+	int i;
+	for(i = 0; i < sys->maxruns; i++)
+	{
+		eprintf("Run %d in role ",i);
+		printTerm(sys->runs[i].role->nameterm);
+		eprintf(" : ");
+		int j;
+		for(j=0; j< sys->runs[i].step; j++)
+		{
+			Roledef rd = eventRoledef(sys,i,j);
+			roledefPrint(rd);
+		}
+		eprintf("\n");
+	}
+}
+
 //! Arachne single claim test
 void
-arachneClaimTest (Claimlist cl, void (*initFunc) (Claimlist, int *, int *))
+arachneClaimTest (Claimlist cl, void (*initFunc)(Claimlist, int*, int*))
 {
   // others we simply test...
-  //int run;
+  int run;
   int newruns = 0;
   int newgoals;
   attack_length = INT_MAX;
@@ -2354,18 +2364,18 @@ arachneClaimTest (Claimlist cl, void (*initFunc) (Claimlist, int *, int *))
   cl->complete = 1;
   sys->current_claim = cl;
 
-  initFunc (cl, &newruns, &newgoals);
-  //run = sys->maxruns-1;
+  initFunc(cl, &newruns, &newgoals);
+  run = sys->maxruns-1;
   {
-    int realStart (void)
+     int realStart (void)
     {
-#ifdef DEBUG
-      if (DEBUGL (5))
-	{
-	  printSemiState ();
-	}
-#endif
-      return iterate_buffer_attacks ();
+		#ifdef DEBUG
+    	if (DEBUGL (5))
+    	{
+    		printSemiState ();
+    	}
+		#endif
+    	return iterate_buffer_attacks ();
     }
 	/**
 	 * Add initial knowledge node
@@ -2377,37 +2387,32 @@ arachneClaimTest (Claimlist cl, void (*initFunc) (Claimlist, int *, int *))
 
       m0tl = knowledgeSet (sys->know);
       if (m0tl != NULL)
-	{
-	  m0t = termlist_to_tuple (m0tl);
-	  I_M->roledef->message = m0t;
-	  m0run = semiRunCreate (INTRUDER, I_M);
-	  newruns++;
-	  proof_suppose_run (m0run, 0, 1);
-	  sys->runs[m0run].height = 1;
-	}
+      {
+    	  m0t = termlist_to_tuple (m0tl);
+    	  I_M->roledef->message = m0t;
+    	  m0run = semiRunCreate (INTRUDER, I_M);
+     	  newruns++;
+    	  proof_suppose_run (m0run, 0, 1);
+    	  sys->runs[m0run].height = 1;
+      }
       else
-	{
-	  m0run = -1;
-	}
+      {
+    	  m0run = -1;
+      }
 		      /**
 		       * Add specific goal info and iterate algorithm
 		       */
-      /*
-         add_claim_specifics (sys, cl,
-         roledef_shift (sys->runs[run].start, cl->ev),
-         realStart);
-       */
-      add_claim_specifics (sys, cl,
-			   roledef_shift (sys->runs[0].start, cl->ev),
-			   realStart);
+  	add_claim_specifics (sys, cl,
+			     roledef_shift (sys->runs[run].start, cl->ev),
+			     realStart);
       if (m0run != -1)
-	{
+      {
 	  // remove initial knowledge node
-	  termDelete (m0t);
-	  termlistDelete (m0tl);
-	  semiRunDestroy ();
-	  newruns--;
-	}
+    	  termDelete (m0t);
+    	  termlistDelete (m0tl);
+    	  semiRunDestroy ();
+    	  newruns--;
+      }
     }
     // remove claiming run goals 
     goal_remove_last (newgoals);
@@ -2445,118 +2450,115 @@ arachneClaimTest (Claimlist cl, void (*initFunc) (Claimlist, int *, int *))
     }
 }
 
-void
-resetOriginalModel ()
+void resetOriginalModel()
 {
-  bindingDone ();
-  termlistDelete (original->proofstate);	// list of proof state terms
+	bindingDone();
+    termlistDelete(original->proofstate);	// list of proof state terms
 }
 
-void
-setModel (const System sys)
+void setModel(const System sys)
 {
-  setBinding (sys);
-  setArachne (sys);
+	setBinding(sys);
+	setArachne(sys);
 }
 
-void
-preComputation ()
+void preComputation()
 {
-  int print_send (Protocol p, Role r, Roledef rd, int index)
-  {
-    eprintf ("IRS: ");
-    termPrint (p->nameterm);
-    eprintf (", ");
-    termPrint (r->nameterm);
-    eprintf (", %i, ", index);
-    roledefPrint (rd);
-    eprintf ("\n");
-    return 1;
-  }
+	  int print_send (Protocol p, Role r, Roledef rd, int index)
+	  {
+	    eprintf ("IRS: ");
+	    termPrint (p->nameterm);
+	    eprintf (", ");
+	    termPrint (r->nameterm);
+	    eprintf (", %i, ", index);
+	    roledefPrint (rd);
+	    eprintf ("\n");
+	    return 1;
+	  }
 
-  int determine_encrypt_max (Protocol p, Role r, Roledef rd, int index)
-  {
-    int tlevel;
+	  int determine_encrypt_max (Protocol p, Role r, Roledef rd, int index)
+	  {
+	    int tlevel;
 
-    tlevel = term_encryption_level (rd->message);
-#ifdef DEBUG
-    if (DEBUGL (3))
-      {
-	eprintf ("Encryption level %i found for term ", tlevel);
-	termPrint (rd->message);
-	eprintf ("\n");
-      }
-#endif
-    if (tlevel > max_encryption_level)
-      max_encryption_level = tlevel;
-    return 1;
-  }
-  max_encryption_level = 0;
+	    tlevel = term_encryption_level (rd->message);
+	#ifdef DEBUG
+	    if (DEBUGL (3))
+	      {
+		eprintf ("Encryption level %i found for term ", tlevel);
+		termPrint (rd->message);
+		eprintf ("\n");
+	      }
+	#endif
+	    if (tlevel > max_encryption_level)
+	      max_encryption_level = tlevel;
+	    return 1;
+	  }
+	  max_encryption_level = 0;
 
-  /*
-   * set up claim role(s)
-   */
+	  /*
+	   * set up claim role(s)
+	   */
 
-  iterate_role_events (determine_encrypt_max);
-#ifdef DEBUG
-  if (DEBUGL (1))
-    {
-      eprintf ("Maximum encryption level: %i\n", max_encryption_level);
-    }
-#endif
+	  iterate_role_events (determine_encrypt_max);
+	#ifdef DEBUG
+	  if (DEBUGL (1))
+	    {
+	      eprintf ("Maximum encryption level: %i\n", max_encryption_level);
+	    }
+	#endif
 
-  fixAgentKeylevels ();
-  indentDepth = 0;
-  proofDepth = 0;
+	  fixAgentKeylevels ();
+	  indentDepth = 0;
+	  proofDepth = 0;
 }
 
-int
-spuriousAttackCheck (Claimlist cl)
+int spuriousAttackCheck(Claimlist cl)
 {
-  //store the abstract model
-  System abst_sys = sys;
+	//store the abstract model
+	System abst_sys = sys;
 
-  //store the current switches
-  int old_maxtracelength = switches.maxtracelength;
-  int old_regular_runs = switches.runs;
+	//store the current switches
+	int old_maxtracelength = switches.maxtracelength;
+	int old_regular_runs = switches.runs;
 
-  //remember global variables
-  int old_attack_leastcost = attack_leastcost;
-  int old_proofDepth = proofDepth;
-  int old_max_encryption_level = max_encryption_level;
-  int old_indentDepth = indentDepth;
-  int old_prevIndentDepth = prevIndentDepth;
-  int old_indentDepthChanges = indentDepthChanges;
-  int old_rolelocal_variable = rolelocal_variable;
+	//remember global variables
+	int old_attack_length = attack_length;
+	int old_attack_leastcost = attack_leastcost;
+	int old_proofDepth = proofDepth;
+	int old_max_encryption_level = max_encryption_level;
+	int old_indentDepth = indentDepth;
+	int old_prevIndentDepth = prevIndentDepth;
+	int old_indentDepthChanges = indentDepthChanges;
+	int old_rolelocal_variable = rolelocal_variable;
+	//set the system to the original model
+	initGlobals();
+	initModelCheck(original);
+	preComputation();
+	//test whether the attack is real in the original model
+	arachneClaimTest(cl,mapRuns);
 
-  //set the system to the original model
-  initGlobals ();
-  initModelCheck (original);
-  preComputation ();
-  //test whether the attack is real in the original model
-  arachneClaimTest (cl, mapRuns);
+	//free original runs
+	while (sys->maxruns > 0)
+	{
+	     semiRunDestroy ();
+	}
+	resetOriginalModel();
 
-  //free original runs
-  while (sys->maxruns > 0)
-    {
-      semiRunDestroy ();
-    }
-  resetOriginalModel ();
+	//reset the switches
+	switches.maxtracelength = old_maxtracelength;
+	switches.runs = old_regular_runs;
 
-  //reset the switches
-  switches.maxtracelength = old_maxtracelength;
-  switches.runs = old_regular_runs;
-
-  //restore global variables
-  attack_leastcost = old_attack_leastcost;
-  proofDepth = old_proofDepth;
-  max_encryption_level = old_max_encryption_level;
-  indentDepth = old_indentDepth;
-  prevIndentDepth = old_prevIndentDepth;
-  indentDepthChanges = old_indentDepthChanges;
-  rolelocal_variable = old_rolelocal_variable;
-  setModel (abst_sys);
-  return cl->failed;
+	//restore global variables
+	attack_length = old_attack_length;
+	attack_leastcost = old_attack_leastcost;
+	proofDepth = old_proofDepth;
+	max_encryption_level = old_max_encryption_level;
+	indentDepth = old_indentDepth;
+	prevIndentDepth = old_prevIndentDepth;
+	indentDepthChanges = old_indentDepthChanges;
+	rolelocal_variable = old_rolelocal_variable;
+	setModel(abst_sys);
+	return cl->failed;
 }
 
 extern List outputClaims, falsifiedClaims, verified, falsified;
@@ -2568,61 +2570,62 @@ int
 arachneClaim ()
 {
   Claimlist cl;
-  attack_checking = 0;
+  attack_checking=0;
   // Skip the dummy claims or SID markers
   cl = sys->current_claim;
   if (!isClaimSignal (cl))
     {
       // Some claims are always true!
-      if (!cl->alwaystrue && inTermlist (claims, cl->label))
-	{
+      if (!cl->alwaystrue)
+      {
 	  // others we simply test...
-	  arachneClaimTest (cl, initClaimTest);
-	  //additional code for abstraction module
-	  //if the current model is the original one or the claim is true then the property is verified
-	  if (!abstcount || !cl->failed)
-	    {
-	      list_add_tail (&verified, &outputClaims, cl);
-	    }
-	  else
-	    {
-	      Claimlist orgcl = cl;
-	      //if the current model is an abstract one then there must be an attack in this model
-	      if (abstcount)
-		{
-		  //we then find the corresponding claim in the original model
-		  Claimlist clist = original->claimlist;
-		  while (clist != NULL)
-		    {
-		      if (isTermEqual (clist->label, cl->label))
-			{
-			  orgcl = clist;
-			  break;
-			}
-		      clist = clist->next;
-		    }
-		}
-	      attack_checking = 1;	//set the attack_checking state to true
-	      //we check if the attack is not spurious or not
-	      if (spuriousAttackCheck (orgcl))
-		{
-		  //if the attack is not spurious then the property does not satisfy
-		  list_add_tail (&falsified, &falsifiedClaims, orgcl);
-		  eprintf ("Property falsified at abstraction %d:\n",
-			   abstcount);
-		  claimStatusReport (original, orgcl);
-		}
-	      attack_checking = 0;
-	    }
-	}
-      //we close this as the result can only output if the properties are verified (or no spurious attacks)
-      /*
-         claimStatusReport (sys, cl);
-         if (switches.xml)
-         {
-         xmlOutClaim (sys, cl);
-         }
-       */
+		  arachneClaimTest (cl, initClaimTest);
+		  if(!switches.abstractionMethod)
+		  {
+		      claimStatusReport (sys, cl);
+		      if (switches.xml)
+			  {
+			  	  xmlOutClaim (sys, cl);
+			  }
+		  }
+		  else if(inTermlist(claims,cl->label))
+		  {
+			  //if the current model is the original one or the claim is true then the property is verified
+			  if(!abstcount||!cl->failed)
+			  {
+				  list_add_tail(&verified, &outputClaims,cl);
+			  }
+			  else
+			  {
+				  Claimlist orgcl = cl;
+				  //if the current model is an abstract one then there must be an attack in this model
+				  if(abstcount)
+				  {
+					  //we then find the corresponding claim in the original model
+						Claimlist clist = original->claimlist;
+						while(clist!=NULL)
+						{
+							if(isTermEqual(clist->label,cl->label))
+							{
+								orgcl = clist;
+								break;
+							}
+							clist = clist->next;
+						}
+				  }
+				  attack_checking=1; //set the attack_checking state to true
+				  //we check if the attack is not spurious or not
+				  if(spuriousAttackCheck(orgcl))
+				  {
+					  //if the attack is not spurious then the property does not satisfy
+					  list_add_tail(&falsified, &falsifiedClaims,orgcl);
+					  eprintf("Property falsified:\n");
+					  claimStatusReport (original, orgcl);
+				  }
+				  attack_checking=0;
+			  }
+		  }
+      }
       return true;
     }
   return false;
@@ -2641,36 +2644,36 @@ arachneClaim ()
 int
 arachne ()
 {
-  if (switches.runs == 0)
-    {
-      // No real checking.
-      return -1;
-    }
-  if (sys->maxruns > 0)
-    {
-      error ("Something is wrong, number of runs >0.");
-    }
+	if (switches.runs == 0)
+	{
+	      // No real checking.
+	     return -1;
+	}
+	  if (sys->maxruns > 0)
+	    {
+	      error ("Something is wrong, number of runs >0.");
+	    }
 
-  sys->num_regular_runs = 0;
-  sys->num_intruder_runs = 0;
-  preComputation ();
-  Claimlist cl;
-  int count;
-  cl = sys->claimlist;
-  count = 0;
-  while (cl != NULL)
+	sys->num_regular_runs = 0;
+	sys->num_intruder_runs = 0;
+	preComputation();
+	Claimlist cl;
+	int count;
+	cl = sys->claimlist;
+	count = 0;
+	while (cl != NULL)
     {
       /**
        * Check each claim
        */
       sys->current_claim = cl;
       if (isClaimRelevant (cl))	// check for any filtered claims (switch)
-	{
-	  if (arachneClaim ())
-	    {
-	      count++;
-	    }
-	}
+      {
+    	  if (arachneClaim ())
+    	  {
+    		  count++;
+    	  }
+      }
       // next
       cl = cl->next;
     }

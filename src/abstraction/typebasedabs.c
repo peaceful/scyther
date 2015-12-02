@@ -1124,15 +1124,18 @@ typebasedAbstraction ()
 {
   eql_changed = 0;
   ensureTotality ();
+
   //if(!isWellformed()) return 0;
   if (eql_changed)
     resetAbs (sys);
   eql_changed = 0;
   ensureWellFormedness ();
+
   if (eql_changed)
     resetAbs (sys);
   if (trivialEquationlist (eql))
     return 0;
+
   int result = tryAbstractProt (checkSafenessForTypebasedAbs, frec, sys);
   return result;
 }

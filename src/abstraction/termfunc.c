@@ -258,6 +258,22 @@ containLTSharedKeyInPlain (Term t)
     }
 }
 
+//check if the set of atoms and variables of u is included in that of t
+int avInclusion(Term t, Term u)
+{
+	if(realTermLeaf(u))
+	{
+		return isSubterm(u,t);
+	}
+	else if(realTermEncrypt(u))
+	{
+		if(u->helper.fcall)
+			return avInclusion(t, TermOp(u));
+		else return avInclusion(t, TermOp(u))&&avInclusion(t,TermKey(u));
+	}
+	else return avInclusion(t, TermOp1(u)) && avInclusion(t, TermOp2(u));
+}
+
 //check if the sets of atoms and variables of the two terms are overlapped
 int
 avOverlap (Term t, Term u)

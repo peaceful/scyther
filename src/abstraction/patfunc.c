@@ -20,7 +20,6 @@ createVariableWithType (Symbol s, Term type)
   return term;
 }
 
-extern Eqlist eql;
 Term
 createNewVariableWithType (Term type)
 {

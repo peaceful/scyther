@@ -45,6 +45,11 @@ enum
 {
   ACCESSIBLE, NOT_ACCESSIBLE
 } accessLabel;
+
+enum
+{
+	TMP, ORG, PROT
+}labelmode;
 void
 heuristicInit (System mysys)
 {
@@ -303,6 +308,7 @@ addTermForAbstraction (Term t)
   Termlist tmp = comp;
   Term type = getTermType (t);
   Termlist conflict = NULL;
+
   while (tmp != NULL)
     {
       Term type1 = getTermType (tmp->term);
@@ -392,24 +398,21 @@ void getOracleComposedType(Term t)
 }
 */
 
-int
-plaintextSecure (Term t)
-{
-  if (realTermLeaf (t))
-    return t->seclabel.prot_auth == AUTH && t->seclabel.prop_sec == SEC;
-  if (realTermEncrypt (t))
-    return plaintextSecure (TermOp (t));
-  return plaintextSecure (TermOp1 (t)) || plaintextSecure (TermOp2 (t));
-}
 
 int
-plaintextTmpSecure (Term t)
+plaintextAuthentic(int mode, Term t)
 {
   if (realTermLeaf (t))
-    return t->seclabel.tmp_auth == AUTH && t->seclabel.tmp_sec == SEC;
+  {
+	  if(mode==TMP)
+	  	  return t->seclabel.tmp_auth == AUTH;// && t->seclabel.tmp_sec == SEC;
+	  else if(mode==PROT)
+		  return t->seclabel.prot_auth==AUTH;
+	  else return t->seclabel.org_auth==AUTH;
+  }
   if (realTermEncrypt (t))
-    return plaintextTmpSecure (TermOp (t));
-  return plaintextTmpSecure (TermOp1 (t)) || plaintextTmpSecure (TermOp2 (t));
+    return plaintextAuthentic (mode,TermOp (t));
+  return plaintextAuthentic (mode,TermOp1 (t)) || plaintextAuthentic (mode,TermOp2 (t));
 }
 
 struct cryptolabel
@@ -467,8 +470,8 @@ getCryptoLabel (Term t)
 	    {
 	      lb.sec_crypt =
 		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
-	      if (containDiffAgent (op, NULL))
-		lb.auth_crypt = MAYBE_AUTH;
+	      //if (containDiffAgent (op, NULL))
+	      lb.auth_crypt = MAYBE_AUTH;
 	    }
 	}
     }
@@ -496,6 +499,7 @@ isInverseKey (Term t)
     }
   return 0;
 }
+
 
 void
 computeProtLabel (Term t, int seclabel, int authlabel, int access)
@@ -540,23 +544,57 @@ computeProtLabel (Term t, int seclabel, int authlabel, int access)
   if (realTermEncrypt (t))
     {
       Term op = TermOp (t);
-      struct cryptolabel clb = getCryptoLabel (t);
-      int newsec = max (seclabel, clb.sec_crypt);
-      int newauth = max (authlabel, clb.auth_crypt);
       if (t->helper.fcall)
 	{
 	  if (isInverseKey (TermKey (t)))
-	    computeProtLabel (op, seclabel, authlabel, access);
+		  computeProtLabel (op, seclabel, authlabel, access);
+	  else if (containLTSharedKeyInPlain (op) != NULL)	//it is a MAC
+		  computeProtLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 	  else
-	    computeProtLabel (op, newsec, newauth, NOT_ACCESSIBLE);
+	    {
+	      if (plaintextAuthentic (PROT,op))
+	    	  computeProtLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
+	      else //computeProtLabel (op, SEC, authlabel, NOT_ACCESSIBLE);	//otherwise, a normal hash
+	    	  computeProtLabel (op, SEC, max(MAYBE_AUTH,authlabel), NOT_ACCESSIBLE);
+	    }
 	}
       else
 	{
 	  Term key = TermKey (t);
-	  computeProtLabel (op, newsec, newauth, access);
-	  if (!isLTKey (key))
+	  if (isPublicKey (key))	//if it is public-key encryption
 	    {
-	      computeProtLabel (key, SEC, NOAUTH, NOT_ACCESSIBLE);
+	      //check if some agent identifiers are there
+	      if (containDiffAgent (op, TermOp (key)))
+		{
+	    	  computeProtLabel (op, SEC, AUTH, access);
+		}
+	      else
+		{
+		  if (plaintextAuthentic (PROT,op))
+			  computeProtLabel (op, SEC, AUTH, access);
+		  else
+			  computeProtLabel (op, SEC, authlabel, access);
+		}
+	    }
+	  else if (isPrivateKey (key))	// if it is a signature
+	    {
+		  computeProtLabel (op, seclabel, AUTH, access);
+	    }
+	  else if (isLTSharedKey (key))
+	    {
+		  computeProtLabel (op, SEC, AUTH, access);
+	    }
+	  else			//symmetric encryption with a session key
+	    {
+	      int newsec =
+		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
+	      int newauth;
+	      if(plaintextAuthentic (PROT,key)&& key->seclabel.prop_sec==SEC)
+	    	  newauth = AUTH;
+	      else if(containDiffAgent (op, NULL))
+	    	  newauth = max (authlabel,MAYBE_AUTH);
+	      else newauth = authlabel;
+	      computeProtLabel (op, newsec, newauth, access);
 	    }
 	}
     }
@@ -567,6 +605,17 @@ computeProtLabel (Term t, int seclabel, int authlabel, int access)
     }
 }
 
+
+int comparePlainAndKey(Term plain, Term key)
+{
+	struct cryptolabel plainlb = getCryptoLabel(plain);
+	struct cryptolabel keylb = getCryptoLabel(key);
+	if(plainlb.sec_crypt==SEC)
+	{
+		return keylb.auth_crypt<= plainlb.auth_crypt&&avInclusion(plain,key);
+	}
+	return 0;
+}
 
 void
 computeTmpLabel (Term t, int seclabel, int authlabel, int access)
@@ -601,13 +650,13 @@ computeTmpLabel (Term t, int seclabel, int authlabel, int access)
 	    computeTmpLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 	  else
 	    {
-	      if (plaintextTmpSecure (op))
+	      if (plaintextAuthentic (TMP,op))
 		{
 		  //t->auth=AUTH; //new
 		  computeTmpLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 		}
 	      else
-		computeTmpLabel (op, SEC, authlabel, NOT_ACCESSIBLE);	//otherwise, a normal hash
+		computeTmpLabel (op, SEC, max(authlabel, MAYBE_AUTH), NOT_ACCESSIBLE);	//otherwise, a normal hash
 	    }
 	}
       else
@@ -622,7 +671,7 @@ computeTmpLabel (Term t, int seclabel, int authlabel, int access)
 		}
 	      else
 		{
-		  if (plaintextTmpSecure (op))
+		  if (plaintextAuthentic (TMP,op))
 		    computeTmpLabel (op, SEC, AUTH, access);
 		  else
 		    computeTmpLabel (op, SEC, authlabel, access);
@@ -640,9 +689,12 @@ computeTmpLabel (Term t, int seclabel, int authlabel, int access)
 	    {
 	      int newsec =
 		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
-	      int newauth = containDiffAgent (op, NULL) ? max (authlabel,
-							       MAYBE_AUTH) :
-		authlabel;
+	      int newauth;
+	      if(plaintextAuthentic (TMP,key)&& key->seclabel.tmp_sec==SEC)
+	    	  newauth = AUTH;
+	      else if(containDiffAgent (op, NULL))
+	    	  newauth = max (authlabel,MAYBE_AUTH);
+	      else newauth = authlabel;
 	      computeTmpLabel (op, newsec, newauth, access);
 	    }
 	}
@@ -788,11 +840,12 @@ extractComposedTerms ()
      getOracleComposedType(rd->message);
      }
    */
+
   for (r = main_prot->roles; r != NULL; r = r->next)
     for (rd = r->roledef; rd != NULL; rd = rd->next)
       {
-	if (rd->type != CLAIM)
-	  getTopComposed (rd->message);
+		if (rd->type != CLAIM)
+		  getTopComposed (rd->message);
       }
 }
 
@@ -1103,14 +1156,13 @@ typeOverlapped (Term t)
     {
 
       if (!isComparable (tl->term->originType, term))	//only consider terms whose types are originally disjoint
-	{
-	  Term type1 = getTermType (tl->term);
-	  if (isComparable (type, type1))
-	    //if(isSubtype(type,tl->term)||isSubtype(tl->term,type))
-	    {
-	      return type1;
-	    }
-	}
+      {
+    	  Term type1 = getTermType (tl->term);
+    	  if (isComparable (type, type1))
+    	  {
+    		  return type1;
+    	  }
+	  }
       tl = tl->next;
     }
   return NULL;
@@ -1395,42 +1447,77 @@ isEssentialTerm (Term t)
   return t->e_auth == YES || t->e_sec == YES;
 }
 
-//check if a term contains an essential term that does not occur as subterm of terms in a termlist
+//check if all essential subterms of t are contained in another term u
 int
-notContainEssentialTermlist (Term t, Termlist tl)
+allEssentialTermContained(Term t, Term u)
 {
-  if (realTermLeaf (t))
-    {
-      if (isEssentialTerm (t))
+	if(realTermLeaf(t))
+	{
+		if(isEssentialTerm(t))
+		{
+			if(isSubterm(t,u)) return 1;
+			return 0;
+		}
+		return 1;
+	}
+	else if(realTermEncrypt(t))
+	{
+		if(t->helper.fcall)
+			return allEssentialTermContained(TermOp(t),u);
+		else return allEssentialTermContained(TermOp(t),u)&&
+				    allEssentialTermContained(TermKey(t),u);
+	}
+	else return allEssentialTermContained(TermOp1(t),u)&&
+			    allEssentialTermContained(TermOp2(t),u);
+}
+//return true if all essential subterms of t are contained as subterm of terms in a termlist
+int
+AllEssentialTermContainedInTermlist (Term t, Termlist tl)
+{
+    if (isEssentialTerm (t))
 	{
 	  Termlist tmp = tl;
 	  while (tmp != NULL)
 	    {
 	      if (isSubterm (t, tmp->term->subst))
-		break;
+	    	  return 1;
 	      tmp = tmp->next;
 	    }
-	  if (tmp == NULL)
-	    return 1;
+	  return 0;
 	}
-      return 0;
-    }
-  else if (realTermEncrypt (t))
+    else if (realTermLeaf (t))
+    {
+    	return 0;
+ 	}
+    else if (realTermEncrypt (t))
     {
       if (t->helper.fcall)
-	return notContainEssentialTermlist (TermOp (t), tl);
+	return AllEssentialTermContainedInTermlist (TermOp (t), tl);
       else
-	return notContainEssentialTermlist (TermOp (t), tl)
-	  || notContainEssentialTermlist (TermKey (t), tl);
+	return AllEssentialTermContainedInTermlist (TermOp (t), tl) &&
+	       AllEssentialTermContainedInTermlist (TermKey (t), tl);
     }
   else
-    return notContainEssentialTermlist (TermOp1 (t), tl)
-      || notContainEssentialTermlist (TermOp2 (t), tl);
+    return AllEssentialTermContainedInTermlist (TermOp1 (t), tl) &&
+           AllEssentialTermContainedInTermlist (TermOp2 (t), tl);
+}
+
+//check if t occurs in some other field
+int
+occurSomeWhere (Term t, Termlist keep)
+{
+  Termlist tl;
+  for (tl = keep; tl != NULL; tl = tl->next)
+    {
+      if (!isTermEqual(t, tl->term->subst)&&isSubterm (t, tl->term->subst))
+	return 1;
+    }
+  return 0;
 }
 
 //handle hashes
 int
-buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
+buildPatternForHash (Term plain, int secretOverlap, Termlist * pull, Termlist * keep,
 		     int sec_outer, int auth_outer, int sec_inner,
 		     int auth_inner, Term hashfunc)
 {
@@ -1452,7 +1539,16 @@ buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
 	  prev->next = tmp->next;
 	  newkeep = *keep;
 	}
+      if(t->e_auth==YES&&auth_inner==AUTH&&occurSomeWhere(t,newkeep))
+      {
+    	  if (prev != NULL)
+    	  	prev->next = tmp;
+    	        tmp = tmp->next;
+    	  continue;
+      }
       ttmp = createTmpTerm (1, newpull, newkeep, hashfunc);
+      if(plain!=NULL)
+    	  ttmp = makeTermEncrypt(plain,ttmp);
       //eprintf("check for removing:");
       //printTerm(ttmp);
       //eprintf("\n");
@@ -1461,16 +1557,27 @@ buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
       int not_complete_removal = newkeep != NULL || newpull != NULL;
       smallterm = t;
       smalltype = getTermType (parentTerm);
-      int secondOccurrence = secondOccurrenceInTuple (bigterm, 0);
+      int redundancy = secondOccurrenceInTuple (bigterm, 0);
       int need_not_secure = !isLTKey (t) && !containEssentialTerm (t);
-      isSafe = not_complete_removal && (secondOccurrence || need_not_secure ||
-					(!notContainEssentialTermlist
-					 (t, newkeep)
+
+      isSafe = not_complete_removal && (redundancy || need_not_secure ||
+					(((t->e_auth==YES&& isSubterm(t,plain))||AllEssentialTermContainedInTermlist(t, newkeep))
+					 && checkLabelPreservation (ttmp,sec_outer,auth_outer,ACCESSIBLE)));
+      /*
+      isSafe = not_complete_removal && (redundancy || need_not_secure ||
+					(AllEssentialTermContainedInTermlist(t, newkeep)
 					 && checkLabelPreservation (ttmp,
 								    sec_outer,
 								    auth_outer,
 								    ACCESSIBLE)));
-      termDelete (ttmp);
+	  */
+      if(plain==NULL)
+    	  termDelete (ttmp);
+      else
+      {
+    	  termDelete(TermKey(ttmp));
+    	  free(ttmp);
+      }
       if (isSafe)
 	{
 	  if (prev != NULL)
@@ -1487,6 +1594,8 @@ buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
 	  newpull->next = *pull;
 	  //computeGlobalLabel(t);
 	  Term ttmp = createTmpTerm (1, newpull, newkeep, hashfunc);
+	  if(plain!=NULL)
+		  ttmp = makeTermEncrypt(plain,ttmp);
 	  if (prev != NULL)
 	    prev->next = tmp;
 	  //eprintf("check for pulling:");
@@ -1495,14 +1604,20 @@ buildPatternForHash (int secretOverlap, Termlist * pull, Termlist * keep,
 	  isSafe = (sec_outer >= sec_inner && auth_outer >= auth_inner)
 	    || checkLabelPreservation (ttmp, sec_outer, auth_outer,
 				       ACCESSIBLE);
-	  termDelete (ttmp);
+      if(plain==NULL)
+    	  termDelete (ttmp);
+      else
+      {
+    	  termDelete(TermKey(ttmp));
+    	  free(ttmp);
+      }
 	  free (newpull);
 	  newpull = NULL;
 	  //int need_not_secure = t->seclabel.gb_auth == NOAUTH && t->seclabel.gb_sec==NOSEC;
 	  if (isSafe)		//&&(need_not_secure||secureOracle||composedTermSecure(newkeep)))
 	    {
 	      //if(outercrypto.type!=NONE||typeOverlapped(t)==NULL)
-	      if (typeOverlapped (t) == NULL)
+	      if (sec_outer != NOSEC || auth_outer != NOAUTH||typeOverlapped (t) == NULL)
 		{
 		  *pull = termlistAdd (*pull, tmp->term);
 		  if (eqtype != SYSTEM_REMOVE_FIELD)
@@ -1688,19 +1803,6 @@ containSomeEssential (Termlist keep)
   return 0;
 }
 
-//check if t occurs in some other field
-int
-occurSomeWhere (Term t, Termlist keep)
-{
-  Termlist tl;
-  for (tl = keep; tl != NULL; tl = tl->next)
-    {
-      if (isSubterm (t, tl->term->subst))
-	return 1;
-    }
-  return 0;
-}
-
 int
 getCryptoType (Term t)
 {
@@ -1738,7 +1840,7 @@ getCryptoType (Term t)
 
 //handle encryptions
 int
-buildPatternForEnc (int secretOverlap, Term type, Termlist * pull,
+buildPatternForEnc (Term plain, int secretOverlap, Term type, Termlist * pull,
 		    Termlist * keep, int sec_outer, int auth_outer,
 		    int sec_inner, int auth_inner, int cryptotype, Term key)
 {
@@ -1760,7 +1862,7 @@ buildPatternForEnc (int secretOverlap, Term type, Termlist * pull,
 	  //check if the key is useful to protect the term
 	  //int good_key=cryptotype!=SYM||!sessionKeyWeaker(t,key);
 	  //pulling creates additional unifiability
-	  int create_unif = typeOverlapped (t) != NULL;
+	  int create_unif = sec_outer == NOSEC && auth_outer == NOAUTH &&typeOverlapped (t) != NULL;
 	  //pulling leaks secret to the intruder though oracles
 	  int leak_secret = isSubtermInTermlist (t, secret);
 	  //term may contain sensitive agent identities
@@ -1770,10 +1872,11 @@ buildPatternForEnc (int secretOverlap, Term type, Termlist * pull,
 	     ((innercrypto.type!=SYM&&containDiffAgent(t,TermOp(innercrypto.info)))||
 	     (innercrypto.type==SYM&&containDiffAgent(t,NULL)));
 	   */
-	  int agent_sensitive =
+	  int crypto = getCryptoType(t);
+	  int containAgent =
 	    ((cryptotype != SYM && containDiffAgent (t, key))
-	     || (cryptotype == SYM && containDiffAgent (t, NULL)))
-	    && getCryptoType (t) != MAC;
+	     || (cryptotype == SYM && (crypto==SIG||containDiffAgent (t, NULL))))
+	    && crypto != MAC;
 
 	  //pull out if
 	  if (!leak_secret && !create_unif)
@@ -1794,21 +1897,33 @@ buildPatternForEnc (int secretOverlap, Term type, Termlist * pull,
 		  newkeep = *keep;
 		}
 	      ttmp = createTmpTerm (0, newpull, newkeep, key);
-
+	      if(plain!=NULL)
+	    	  ttmp = makeTermEncrypt(plain,ttmp);
 	      //eprintf("Try to pull:");
 	      //printTerm(ttmp);
 	      //eprintf("\n");
 
 	      int isSafe = (sec_outer >= sec_inner
 			    && auth_outer >= auth_inner)
+			    || !containEssentialTerm(t) || (t->seclabel.prot_sec==NOSEC && isSubterm(t,key))
 		|| checkLabelPreservation (ttmp, sec_outer, auth_outer,
 					   ACCESSIBLE);
-	      termDelete (ttmp);
+	      if(plain==NULL)
+	    	  termDelete (ttmp);
+	      else
+	      {
+	    	  termDelete(TermKey(ttmp));
+	    	  free(ttmp);
+	      }
 	      free (newpull);
 	      newpull = NULL;
+	      int occur = occurSomeWhere (t, newkeep);
+	      int crypto = getCryptoType(t);
+	      //hashes that contain agent names and stay alone (single field) are not considered agent-sensitive (except signatures)
+	      int agent_sensitive = containAgent&&(crypto==SIG||newkeep!=NULL);
 	      if (prev != NULL)
 		prev->next = tmp;
-	      if (isSafe && (!agent_sensitive || occurSomeWhere (t, newkeep)))
+	      if (isSafe&& ((agent_sensitive&&occur) || (!agent_sensitive &&(!occur||auth_inner!=AUTH))))
 		{
 		  *pull = termlistAdd (*pull, tmp->term);
 		  //remove from keep list
@@ -1859,11 +1974,14 @@ addForbiddenTypes (Term pattype, Term term)
       addForbiddenTypes (TermOp1 (pattype), term);
       addForbiddenTypes (TermOp2 (pattype), term);
     }
-  else if (realTermEncrypt (pattype))
+  else //if (realTermEncrypt (pattype))
     {
       Term t = substitutedTerm (pattype);
-      t->originType = term;
-      forbidden = termlistAdd (forbidden, t);
+      if(realTermEncrypt(t))
+      {
+		  t->originType = term;
+		  forbidden = termlistAdd (forbidden, t);
+      }
     }
 }
 
@@ -1955,7 +2073,7 @@ adaptKeeplistByRefinement (Termlist * keep, Termlist * pull, Termlist type)
   tmp->prev = tl;
   if (i == 1)
     *keep = tl;
-  *pull = termlistDelTerm (tmpl);
+  (*pull) = termlistDelTerm (tmpl);
   return 1;
 }
 
@@ -2022,8 +2140,8 @@ fixUnifIssue (const int isHash, Term key, Termlist * keep, Termlist * pull,
       result = NO_FIX;
     }
   //check if a pair of messages become unifiable
-  Term subst = substitutedTerm (u);
 
+  Term subst = substitutedTerm (u);
   //only check for unifiability if the term contains some authenticated elements in plaintext
   //if(plaintextTermlistInTerm(subst,authav))
   if (containEssentialTerm (subst))
@@ -2183,97 +2301,105 @@ termlistCompare (Termlist tl1, Termlist tl2)
 }
 
 Equation
+createEquationFromKeepPull(Equation eq, Term key, Termlist keep, Termlist pull)
+{
+    Term u;
+    if (eq->left->helper.fcall)
+	u = makeTermFcall (turn_termlist_to_tuple (keep), key);
+    else
+	u = makeTermEncrypt (turn_termlist_to_tuple (keep), key);
+    if (pull == NULL)
+	{
+	  eq->right = u;
+	  Termlist tmp = turn_tuple_to_termlist (TermOp (eq->left));
+	  int equal = termlistCompare (tmp, keep);
+	  if (equal)
+	    eq->type = SYSTEM_TRIVIAL;
+	  else
+	    eq->type = SYSTEM_REMOVE_FIELD;
+	  termlistDelete (tmp);
+	}
+    else
+	{
+ 	  eq->right = makeTermTuple(termlist_to_tuple (pull),u);
+	  eq->type = SYSTEM_PULL_OUT;
+	}
+	return eq;
+}
+
+Equation
+resolveTypeConflict(Equation eq, Term pattype)
+{
+	Equation neweq=resolveDisjointnessConflict(pattype);
+	if(neweq!=NULL)
+	{
+		if(abstCost(eq)<abstCost(neweq))
+		{
+			eql = removeEquationFromList(eql,neweq);
+			return eq;
+		}
+		else return neweq;
+	}
+	return eq;
+}
+
+Equation
 adaptAndAddEquation (Term t, int eqtype, Equation eq, Term pattype,
 		     Termlist * keep, Termlist * pull)
 {
   Term key = TermKey (eq->left);
+  eq->type = eqtype;
   if (eqtype > SYSTEM_TRIVIAL)
     {
-      eq->type = eqtype;
       if (*keep == NULL)
-	{
-	  if (*pull == NULL)
-	    {
-	      //should be a nil-free abstraction, so we keep the smallest term
-	      int min = INT_MAX;
-	      Term right;
-	      findSmallestPatVar (TermOp (eq->left), &right, &min);
-	      eq->right = right;
-	    }
-	  else
-	    eq->right = termlist_to_tuple (*pull);
-	}
-      else
-	{
-	  //adapt the equation type
-	  if (*pull == NULL)
-	    {
-	      if (t->helper.fcall)
-		{
-		  if (eqtype != SYSTEM_REMOVE_FIELD)
-		    //eq->type=SYSTEM_REORDER;
-		    eq->type = SYSTEM_TRIVIAL;
-		}
-	      else
-		eq->type = SYSTEM_TRIVIAL;
-
-	    }
-	  int result = fixUnifIssue (t->helper.fcall, key, keep, pull, 0);
-	  if (result != NO_FIX)
-	    {
-	      termDelete (eq->right);
-	      Term u;
-	      if (eq->left->helper.fcall)
-		u = makeTermFcall (turn_termlist_to_tuple (*keep), key);
-	      else
-		u = makeTermEncrypt (turn_termlist_to_tuple (*keep), key);
-	      if (*pull == NULL)
-		{
-		  eq->right = u;
-		  Termlist tmp = turn_tuple_to_termlist (TermOp (eq->left));
-		  int equal = termlistCompare (tmp, *keep);
-		  if (equal)
-		    eq->type = SYSTEM_TRIVIAL;
+      {
+		  if (*pull == NULL)
+			{
+			  //should be a nil-free abstraction, so we keep the smallest term
+			  int min = INT_MAX;
+			  Term right;
+			  findSmallestPatVar (TermOp (eq->left), &right, &min);
+			  eq->right = right;
+			}
 		  else
-		    eq->type = SYSTEM_REMOVE_FIELD;
-		  termlistDelete (tmp);
-		}
-	      else
-		{
-		  eq->right = termlist_to_tuple (termlistAdd (*pull, u));
-		  eq->type = SYSTEM_PULL_OUT;
-		}
+			eq->right = termlist_to_tuple (*pull);
+      }
+      else eq = createEquationFromKeepPull(eq,key,*keep,*pull);
+    }
+  else eq->right = eq->left;
+
+  //first we resolve any type-conflict
+	Equation neweq=resolveTypeConflict(eq,pattype);
+	if(neweq!=eq)
+	{
+		deleteEquation(eq);
+		termlistDelete(*keep);
+		termlistDelete(*pull);
+		*keep = *pull = NULL;
+		eq= neweq;
+		patternMatching(eq->left,t);
+		constructKeepPull(eq->right,keep,pull);
+		key = TermKey(neweq->left);
+	}
+	else eql = equationlistAdd (eql, neweq);
+
+  if(*keep!=NULL)
+  {
+  	  //we now check for unifiability of terms
+	  int result = fixUnifIssue (t->helper.fcall, key, keep, pull, 0);
+	  if (result == FIXED)
+	    {
+	      if(eq->right!=eq->left) termDelete (eq->right);
+	      eq = createEquationFromKeepPull(eq,key,*keep,*pull);
 	    }
-	  else
+	  else if(result==NO_FIX)
 	    {
 	      //cannot fix this way, so keep the trivial equation
 	      eq->right = eq->left;
 	      eq->type = SYSTEM_TRIVIAL;
 	    }
-	}
-    }
-  else
-    {
-      eq->right = eq->left;
-      eq->type = SYSTEM_TRIVIAL;
-    }
+  }
   makeHomomorphic (eq->right);
-  Equation neweq = resolveDisjointnessConflict (pattype);
-  if (neweq == NULL)
-    eql = equationlistAdd (eql, eq);
-  else if (abstCost (eq) < abstCost (neweq))
-    {
-      eql = equationlistAdd (eql, eq);
-      eql = removeEquationFromList (eql, neweq);
-    }
-  else
-    {
-      deleteEquation (eq);
-      //eprintf("equation replaced:");
-      //printEquation(neweq->left,neweq->right);
-      //eprintf("\n");
-      return neweq;
-    }
   //eprintf("equation created:");
   //printEquation(eq->left,eq->right);
   //eprintf("\n");
@@ -2297,7 +2423,7 @@ overlapSecret (Term type)
 
 //create an equation that abstracts a protocol term
 int
-createEquationForTerm (Term t, int sec_outer, int auth_outer)
+createEquationForTerm (Term plain, Term t, int sec_outer, int auth_outer)
 {
   int success = false;
   int eqtype;
@@ -2329,7 +2455,7 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
 	      homeq = termlistAdd (homeq, key);
 	    }
 	  currdepth++;
-	  return createEquationForTerm (TermOp (t),
+	  return createEquationForTerm (plain, TermOp (t),
 					max (sec_outer, clb.sec_crypt),
 					max (auth_outer, clb.auth_crypt));
 	}
@@ -2348,7 +2474,7 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
 	{
 	  parentTerm = t;
 	  eqtype =
-	    buildPatternForHash (secretOverlap, &pull, &op, sec_outer,
+	    buildPatternForHash (plain, secretOverlap, &pull, &op, sec_outer,
 				 auth_outer, clb.sec_crypt, clb.auth_crypt,
 				 key);
 	  success = eqtype > SYSTEM_TRIVIAL;
@@ -2358,19 +2484,18 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
 	{
 	  if (cryptotype == SYM)
 	    {
-	      eqtype =
-		buildPatternForEnc (secretOverlap, type, &pull, &op,
-				    sec_outer, auth_outer, clb.sec_crypt,
-				    clb.auth_crypt, cryptotype, key);
-	      //int success = eqtype>SYSTEM_TRIVIAL;
-	      if (!plaintextAppearInTermlist (key, comp))
-		success = createEquationForTerm (key, SEC, AUTH)
-		  || eqtype > SYSTEM_TRIVIAL;
+    	  eqtype = buildPatternForEnc (plain,secretOverlap, type, &pull, &op,
+			    sec_outer, auth_outer, clb.sec_crypt,
+			    clb.auth_crypt, cryptotype, key);
+
+	      if (eqtype==SYSTEM_TRIVIAL&&!plaintextAppearInTermlist (key, comp))
+	    	  success = createEquationForTerm (TermOp(t), key, SEC, AUTH);
+
 	    }
 	  else
 	    {
 	      eqtype =
-		buildPatternForEnc (secretOverlap, type, &pull, &op,
+		buildPatternForEnc (plain,secretOverlap, type, &pull, &op,
 				    sec_outer, auth_outer, clb.sec_crypt,
 				    clb.auth_crypt, cryptotype, key);
 	      success = eqtype > SYSTEM_TRIVIAL;
@@ -2381,7 +2506,7 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
       success = neweq->type > SYSTEM_TRIVIAL;
       //if(outercrypto.type==NONE)
       if (sec_outer == NOSEC && auth_outer == NOAUTH)
-	addForbiddenTypes (neweq->right, term);
+    	  addForbiddenTypes (neweq->right, term);
       termlistDelete (pull);
       termlistDelete (op);
       op = pull = NULL;
@@ -2389,7 +2514,7 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
 	//if(trivialEquationlist(eql))
 	{
 	  currdepth++;
-	  return createEquationForTerm (TermOp (t),
+	  return createEquationForTerm (plain, TermOp (t),
 					max (sec_outer, clb.sec_crypt),
 					max (auth_outer, clb.auth_crypt));
 	}
@@ -2397,9 +2522,9 @@ createEquationForTerm (Term t, int sec_outer, int auth_outer)
   else if (realTermTuple (t))
     {
       int result1 =
-	createEquationForTerm (TermOp1 (t), sec_outer, auth_outer);
+	createEquationForTerm (plain, TermOp1 (t), sec_outer, auth_outer);
       int result2 =
-	createEquationForTerm (TermOp2 (t), sec_outer, auth_outer);
+	createEquationForTerm (plain, TermOp2 (t), sec_outer, auth_outer);
       return result1 || result2;
     }
   return success;
@@ -2445,12 +2570,12 @@ computeOriginalLabel (Term t, int seclabel, int authlabel, int access)
 	    computeOriginalLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 	  else
 	    {
-	      if (plaintextTmpSecure (op))
+	      if (plaintextAuthentic (ORG,op))
 		{
 		  computeOriginalLabel (op, SEC, AUTH, NOT_ACCESSIBLE);
 		}
 	      else
-		computeOriginalLabel (op, SEC, authlabel, NOT_ACCESSIBLE);	//otherwise, a normal hash
+		computeOriginalLabel (op, SEC, max(authlabel, MAYBE_AUTH), NOT_ACCESSIBLE);	//otherwise, a normal hash
 	    }
 	}
       else
@@ -2465,7 +2590,7 @@ computeOriginalLabel (Term t, int seclabel, int authlabel, int access)
 		}
 	      else
 		{
-		  if (plaintextTmpSecure (op))
+		  if (plaintextAuthentic (ORG,op))
 		    computeOriginalLabel (op, SEC, AUTH, access);
 		  else
 		    computeOriginalLabel (op, SEC, authlabel, access);
@@ -2483,9 +2608,10 @@ computeOriginalLabel (Term t, int seclabel, int authlabel, int access)
 	    {
 	      int newsec =
 		key->accessible == NOT_ACCESSIBLE ? SEC : MAYBE_SEC;
-	      int newauth = containDiffAgent (op, NULL) ? max (authlabel,
-							       MAYBE_AUTH) :
-		authlabel;
+	      int newauth;
+	      if(comparePlainAndKey(op,key))
+	    	  newauth = authlabel;
+	      else newauth  = max (authlabel, MAYBE_AUTH);
 	      computeOriginalLabel (op, newsec, newauth, access);
 	    }
 	}
@@ -2505,12 +2631,12 @@ createEquations ()
   Termlist tl = comp;
   while (tl != NULL)
     {
-      term = getTermType (tl->term);
+      term = getIntendedPatternType (tl->term);
       bigterm = tl->term;
       currdepth = 0;
       labelInit (tl->term, OriginalLabelInit);
       computeOriginalLabel (tl->term, NOSEC, NOAUTH, ACCESSIBLE);
-      createEquationForTerm (tl->term, NOSEC, NOAUTH);
+      createEquationForTerm (NULL,tl->term, NOSEC, NOAUTH);
       tl = tl->next;
     }
   termlistDelete (homeq);
@@ -2659,3 +2785,4 @@ abstractionSucceed ()
 {
   return typebasedRes || redRes || avRes;
 }
+

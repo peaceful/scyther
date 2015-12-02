@@ -65,6 +65,7 @@ int containDiffAgent (Term, Term);
 int containDiffAgentFromTerm (Term t, Term u);
 int containDiffAgentlist (Term t, Termlist agents);
 Term containLTSharedKeyInPlain (Term);
+int avInclusion(Term t, Term u);
 int avOverlapInTermlist (Term t, Termlist tl);
 int plaintextAppearInTermlist (Term t, Termlist tl);
 int plaintextAppearInTermlistPat (Term t, Termlist tl);

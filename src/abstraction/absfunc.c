@@ -36,19 +36,20 @@ tryAbstractProt1 (int (*safecheck) (Protocol), Term (*absfunc) (Term),
 	{
 	  if (roledef->message != NULL)
 	    {
+		  //eprintf(" Message of role ");
+		  //printTerm(roles->nameterm);
+		  //eprintf("\n");
+		  //printTerm(roledef->message);
+		  //eprintf("\n");
+
 	      if (roledef->absMess == NULL)
 		roledef->absMess = absfunc (roledef->message);
 	      if (!isTermEqual (roledef->message, roledef->absMess))
 		succeed = 1;
 	    }
-	  //eprintf(" Message of role ");
-	  //printTerm(roles->nameterm);
-	  //eprintf("\n");
-	  //printTerm(roledef->message);
-	  //eprintf("\n");
-	  //eprintf("-->");
-	  //printTerm(roledef->absMess);
-	  //eprintf("\n");
+		  //eprintf("-->");
+		  //printTerm(roledef->absMess);
+		  //eprintf("\n");
 	  roledef = roledef->next;
 	}
       roles = roles->next;
