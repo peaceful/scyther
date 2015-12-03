@@ -83,7 +83,7 @@ switchesInit (int argc, char **argv)
   switches.intruder = true;	// default allows an intruder
   switches.chosenName = false;	// default no chosen name attacks
   switches.agentUnfold = 0;	// default not to unfold agents
-  switches.abstractionMethod = 0;	// default no abstraction used
+  switches.maxAbstractions = 0;	// default no abstractions
   switches.useAttackBuffer = false;	// don't use by default as it does not work properly under windows vista yet
 
   // Misc
@@ -887,19 +887,19 @@ switcher (const int process, int index, int commandline)
     }
 
   //for abstraction, currently there is only one method
-  if (detect (' ', "abstract", 0))
+  if (detect (' ', "max-abst", 1))
     {
       if (!process)
 	{
 	 // if (switches.expert)
 	    {
-	         helptext ("--abstract",
-	         "Abstraction method used. Default: disabled");
+	         helptext ("--max-abst=<int>",
+	         "Maximal number of abstractions. Default: 0");
 	    }
 	}
       else
 	{
-	  switches.abstractionMethod = true;
+	  switches.maxAbstractions =integer_argument ();
 	  return index;
 	}
     }

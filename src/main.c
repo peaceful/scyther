@@ -87,9 +87,10 @@ void scanner_cleanup (void);
 void strings_cleanup (void);
 int yyparse (void);
 
+/*
 int modelCheck (const System sys);
 void MC_single (const System sys);
-
+*/
 //! The main body, as called by the environment.
 int
 main (int argc, char **argv)
@@ -171,7 +172,7 @@ main (int argc, char **argv)
       warning ("Selected output method is %i", switches.output);
     }
 #endif
-  runVerification (MC_single);
+  runVerification(original);
   //System abssys = getAbstractSystem();
   //eprintf("abstracted protocol:\n");
   //protocolsPrint(abssys->protocols);
@@ -244,51 +245,3 @@ main (int argc, char **argv)
  */
 
 
-void
-MC_single (const System sys)
-{
-  /*
-   * simple one-time check
-   */
-  initModelCheck (sys);
-  arachnePrepare ();
-/*
-	bindingInit (sys);
-  arachneInit (sys);
-  arachnePrepare();
-  systemReset (sys);		// reset any globals
-  systemRuns (sys);		// init runs data
-  */
-  modelCheck (sys);
-
-  //arachneDone ();
-  //knowledgeDestroy (sys->know); //close this because atomic terms are shared among abstract models
-  //knowledgeDelete(sys->know);//only shallow deletion is done because abstract systems share the basic knowledge
-  //protocolDelete(sys->protocols);
-  //systemDone (sys);
-}
-
-
-//! Model check the system, given all parameters.
-/*
- * Precondition: the system was reset with the corresponding parameters.
- * Reports time and states traversed.
- * Note that the return values doubles as the number of failed claims.
- *@return True iff any claim failed, and thus an attack was found.
- */
-
-int
-modelCheck (const System sys)
-{
-  int claimcount;
-
-  /* modelcheck the system */
-  claimcount = arachne ();
-
-  if (claimcount == 0)
-    {
-      warning ("No claims in system.");
-    }
-
-  return (sys->failed != STATES0);
-}

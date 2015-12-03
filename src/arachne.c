@@ -2566,8 +2566,34 @@ extern Termlist claims;
 extern int abstcount;
 
 //! Arachne single claim inspection
+
 int
-arachneClaim ()
+arachneClaimWithoutAbstraction ()
+{
+  Claimlist cl;
+
+  // Skip the dummy claims or SID markers
+  cl = sys->current_claim;
+  if (!isClaimSignal (cl))
+    {
+      // Some claims are always true!
+      if (!cl->alwaystrue)
+	{
+	  // others we simply test...
+	  arachneClaimTest (cl,initClaimTest);
+	}
+      claimStatusReport (sys, cl);
+      if (switches.xml)
+	{
+	  xmlOutClaim (sys, cl);
+	}
+      return true;
+    }
+  return false;
+}
+
+int
+arachneClaimWithAbstraction ()
 {
   Claimlist cl;
   attack_checking=0;
@@ -2575,21 +2601,9 @@ arachneClaim ()
   cl = sys->current_claim;
   if (!isClaimSignal (cl))
     {
-      // Some claims are always true!
-      if (!cl->alwaystrue)
+      if (!cl->alwaystrue&&inTermlist(claims,cl->label))
       {
-	  // others we simply test...
-		  arachneClaimTest (cl, initClaimTest);
-		  if(!switches.abstractionMethod)
-		  {
-		      claimStatusReport (sys, cl);
-		      if (switches.xml)
-			  {
-			  	  xmlOutClaim (sys, cl);
-			  }
-		  }
-		  else if(inTermlist(claims,cl->label))
-		  {
+		  	  arachneClaimTest (cl, initClaimTest);
 			  //if the current model is the original one or the claim is true then the property is verified
 			  if(!abstcount||!cl->failed)
 			  {
@@ -2624,7 +2638,6 @@ arachneClaim ()
 				  }
 				  attack_checking=0;
 			  }
-		  }
       }
       return true;
     }
@@ -2642,18 +2655,8 @@ arachneClaim ()
  */
 
 int
-arachne ()
+arachne(int(*arachneClaim)())
 {
-	if (switches.runs == 0)
-	{
-	      // No real checking.
-	     return -1;
-	}
-	  if (sys->maxruns > 0)
-	    {
-	      error ("Something is wrong, number of runs >0.");
-	    }
-
 	sys->num_regular_runs = 0;
 	sys->num_intruder_runs = 0;
 	preComputation();
@@ -2669,7 +2672,7 @@ arachne ()
       sys->current_claim = cl;
       if (isClaimRelevant (cl))	// check for any filtered claims (switch)
       {
-    	  if (arachneClaim ())
+    	  if (arachneClaim())
     	  {
     		  count++;
     	  }

@@ -13,7 +13,9 @@
 #include "../switches.h"
 #include "../claim.h"
 #include "../xmlout.h"
+#include "../arachne.h"
+#include "../attack_check.h"
 #include "time.h"
 #endif /* ABSYS_H_ */
 
-void runVerification (void (*MC_single) (const System));
+void runVerification (const System);

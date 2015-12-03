@@ -5,7 +5,6 @@
  *      Author: nguyen
  */
 #include "abssys.h"
-#define MAX_ABS 7
 extern System original;
 extern Eqlist eql;
 Symbol pat;
@@ -301,7 +300,7 @@ buildAbstractionList ()
 {
   System abssys = systemDuplicate (original);
   abstcount = 0;
-  while (abstcount < MAX_ABS)
+  while (abstcount < switches.maxAbstractions)
     {
       abssys = abstractSystem (abssys);
       if (abstractionSucceed ())
@@ -331,18 +330,6 @@ outputResult (System abssys)
 	}
       claims = claims->next;
     }
-  /*
-     Claimlist claims = abssys->claimlist;
-     while(claims!=NULL)
-     {
-     claimStatusReport (abssys, claims);
-     if (switches.xml)
-     {
-     xmlOutClaim (abssys, claims);
-     }
-     claims = claims->next;
-     }
-   */
 }
 
 void
@@ -372,52 +359,6 @@ freeSystem (System sys)
   systemDone (sys);
 }
 
-/*
-Term getImage(Term t, Termlist subs)
-{
-	Termlist tl = subs;
-	while(tl!=NULL)
-	{
-		if(isTermEqual(t,tl->term)) return tl->term->subst;
-		tl = tl->next;
-	}
-	return NULL;
-}
-
-Term getPreImage(Term t, Termlist subs)
-{
-	Termlist tl = subs;
-	while(tl!=NULL)
-	{
-		if(isTermEqual(t,tl->term->subst)) return tl->term;
-		tl = tl->next;
-	}
-	return t;
-}
-
-
-Term buildSecretTerm(Term t, Termlist subs)
-{
-	if(realTermLeaf(t))
-	{
-		if(t->type==GLOBAL) return t;
-		Term img = getImage(t,subs);
-		t=img==NULL?t:img;
-		return t;
-	}
-	Term preimg = getPreImage(t,subs);
-	if(preimg!=NULL) return preimg;
-	if(realTermEncrypt(t))
-	{
-		Term op = buildSecretTerm(TermOp(t), subs);
-		if(t->helper.fcall)
-			return makeTermFcall(op, TermKey(t));
-		else return makeTermEncrypt(op,buildSecretTerm(TermKey(t),subs));
-	}
-	return makeTermTuple(buildSecretTerm(TermOp1(t), subs),buildSecretTerm(TermOp2(t), subs));
-}
-
-*/
 
 void
 list_delete_system (List l)
@@ -467,58 +408,79 @@ removeClaims ()
   claims = newClaims;
 }
 
-void
-runVerification (void (*MC_single) (const System))
+//! Model check the system, given all parameters.
+/*
+ * Precondition: the system was reset with the corresponding parameters.
+ * Reports time and states traversed.
+ * Note that the return values doubles as the number of failed claims.
+ *@return True iff any claim failed, and thus an attack was found.
+ */
+
+void MC_check(int (*arachneClaim)(),const System sys)
 {
-  if(!switches.abstractionMethod)
+	  initModelCheck (sys);
+	  arachnePrepare ();
+	  arachne(arachneClaim);
+}
+
+void
+runVerification (const System sys)
+{
+  if (sys->maxruns > 0)
+	{
+	      error ("Something is wrong, number of runs >0.");
+	}
+  if(!switches.maxAbstractions)
   {
-	  MC_single(original);
-	  return;
+	  MC_check(arachneClaimWithoutAbstraction,sys);
   }
-  abssysInit ();
-  struct timeval start, finish;
-  long msec;
-  gettimeofday (&start, NULL);
-  buildAbstractionList ();
-  gettimeofday (&finish, NULL);
-  msec = timevaldiff (&start, &finish);
-  eprintf ("Abstractions were generated in milliseconds: %d\n", msec);
-  System abssys;
-  List abst = absList;
-  while (claims != NULL && abstcount >= 0)
-    {
-      abssys = (System) abst->data;
-      //systemStart(abssys);
-      //abssys->traceKnow[0] = abssys->know;
-      eprintf("Analyzing the top protocol model in the stack... \n");
-      MC_single (abssys);
-      //eprintf("Abstraction number %d: \n", abstcount);
-      if (verified != NULL || falsified != NULL)
-      {
-		  if (verified != NULL)
-			{
-			  eprintf ("Properties verified:\n");
-			  outputResult (abssys);
-			}
-		  if (abstcount)
+  else
+  {
+	  abssysInit ();
+	  struct timeval start, finish;
+	  long msec;
+	  gettimeofday (&start, NULL);
+	  buildAbstractionList ();
+	  gettimeofday (&finish, NULL);
+	  msec = timevaldiff (&start, &finish);
+	  eprintf ("Abstractions were generated in milliseconds: %d\n\n", msec);
+	  eprintf("----------------------------------------------------------\n");
+	  System abssys;
+	  List abst = absList;
+	  while (claims != NULL && abstcount >= 0)
+		{
+		  abssys = (System) abst->data;
+		  eprintf("Analyzing the top protocol model in the stack... \n");
+		  MC_check(arachneClaimWithAbstraction,abssys);
+		  //eprintf("Abstraction number %d: \n", abstcount);
+		  if (verified != NULL || falsified != NULL)
 		  {
-			  eprintf("\nThe abstract model number %d was analyzed: \n", abstcount);
-			  protocolsPrint(abssys->protocols);
-			  eprintf("\n");
+			  if (verified != NULL)
+				{
+				  eprintf ("Properties verified:\n");
+				  outputResult (abssys);
+				}
+			  if (abstcount)
+			  {
+				  eprintf("\nThe abstract model number %d was analyzed: \n", abstcount);
+				  protocolsPrint(abssys->protocols);
+				  eprintf("\n");
+			  }
+			  else eprintf ("\nThe original protocol was analyzed");
+			  removeClaims ();
+			  eprintf("----------------------------------------------------------\n");
 		  }
-		  else eprintf ("\nThe original protocol was analyzed");
-		  removeClaims ();
-      }
-      abstcount--;
-      freeClaims ();
-      verified = falsified = outputClaims = falsifiedClaims = NULL;
-      abst = abst->next;
-    }
-  list_delete_system (absList);
-  deleteEqlist (eql);
-  termlistDelete (secret);
-  termlistDelete (homfunc);
-  //termlistDelete(secretav);
+		  abstcount--;
+		  freeClaims ();
+		  verified = falsified = outputClaims = falsifiedClaims = NULL;
+		  abst = abst->next;
+		}
+	  list_delete_system (absList);
+	  deleteEqlist (eql);
+	  termlistDelete (secret);
+	  termlistDelete (homfunc);
+	  //termlistDelete(secretav);
+  }
 }
 
 /*
