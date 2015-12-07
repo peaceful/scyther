@@ -4,7 +4,11 @@
  *  Created on: May 26, 2014
  *      Author: nguyen
  */
+#include "../term.h"
 #include "heuristic.h"
+#include "subtype.h"
+#include "termfunc.h"
+
 extern Termlist secret, homfunc;
 //extern Termlist secretav;
 Termlist auth;

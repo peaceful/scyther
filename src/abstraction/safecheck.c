@@ -5,6 +5,7 @@
  *      Author: nguyen
  */
 #include "safecheck.h"
+#include "termfunc.h"
 
 extern Term TERM_NIL;
 
