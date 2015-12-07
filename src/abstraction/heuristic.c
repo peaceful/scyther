@@ -419,6 +419,29 @@ plaintextAuthentic(int mode, Term t)
   return plaintextAuthentic (mode,TermOp1 (t)) || plaintextAuthentic (mode,TermOp2 (t));
 }
 
+int
+isInverseKey (Term t)
+{
+  Termlist tl = sys->know->inversekeys;
+  Termlist prev = NULL;
+  while (tl != NULL)
+    {
+      if (isTermEqual (tl->term, t))
+	{
+	  if (prev == NULL)
+	    return 1;
+	  else if (prev->term->left.symb->text[0] == '_')
+	    return 0;
+	  else
+	    return 1;
+	}
+      prev = tl;
+      tl = tl->next;
+    }
+  return 0;
+}
+
+
 struct cryptolabel
 getCryptoLabel (Term t)
 {
@@ -481,29 +504,6 @@ getCryptoLabel (Term t)
     }
   return lb;
 }
-
-int
-isInverseKey (Term t)
-{
-  Termlist tl = sys->know->inversekeys;
-  Termlist prev = NULL;
-  while (tl != NULL)
-    {
-      if (isTermEqual (tl->term, t))
-	{
-	  if (prev == NULL)
-	    return 1;
-	  else if (prev->term->left.symb->text[0] == '_')
-	    return 0;
-	  else
-	    return 1;
-	}
-      prev = tl;
-      tl = tl->next;
-    }
-  return 0;
-}
-
 
 void
 computeProtLabel (Term t, int seclabel, int authlabel, int access)
