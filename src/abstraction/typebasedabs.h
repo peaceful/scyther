@@ -17,6 +17,7 @@
 #include "patfunc.h"
 void typebasedInit (System mysys);
 int typebasedAbstraction ();
+int checkPatternDisjointness ();
 int checkWelldefinednessForEquation (Term left, Term right);
 Equation resolveDisjointnessConflict (Term type);
 Term frec (Term t);
